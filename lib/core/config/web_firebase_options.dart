@@ -12,7 +12,7 @@ class WebFirebaseOptions {
 
   static const apiKey = String.fromEnvironment(
     'FIREBASE_API_KEY',
-    defaultValue: 'AIzaSyB1ZBFGe1G16Qia6WExadVMYAWEdQJ2jys',
+    defaultValue: 'AIzaSyB1ZBFGelG16Qia6WExadVMYAWEdQJ2jys',
   );
   static const appId = String.fromEnvironment(
     'FIREBASE_APP_ID',
