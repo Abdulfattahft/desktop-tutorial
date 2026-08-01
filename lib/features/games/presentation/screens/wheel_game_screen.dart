@@ -12,8 +12,6 @@ import '../../data/content/games_content.dart';
 import '../../data/models/game_models.dart';
 import '../viewmodels/games_viewmodel.dart';
 
-/// عجلة التحديات — عجلة مرسومة يدويًا (بدون حزم إضافية)
-/// أول طرف يلفّ يحدد النتيجة للطرفين عبر Transaction
 class WheelGameScreen extends StatefulWidget {
   const WheelGameScreen({super.key});
 
@@ -24,7 +22,9 @@ class WheelGameScreen extends StatefulWidget {
 class _WheelGameScreenState extends State<WheelGameScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _spinCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 3200));
+    vsync: this,
+    duration: const Duration(milliseconds: 3200),
+  );
   late final ConfettiController _confetti =
       ConfettiController(duration: const Duration(seconds: 2));
 
@@ -42,7 +42,6 @@ class _WheelGameScreenState extends State<WheelGameScreen>
     super.dispose();
   }
 
-  /// لفّ العجلة: نطلب النتيجة من الـ Transaction ثم نحرك العجلة إليها
   Future<void> _spin() async {
     final user = context.read<AuthViewModel>().currentUser!;
     final session = _lastSession;
@@ -53,18 +52,14 @@ class _WheelGameScreenState extends State<WheelGameScreen>
           roundIndex: session.currentRound,
         );
     if (idx == null || !mounted) return;
-
     _animateTo(idx);
   }
 
   void _animateTo(int idx) {
     if (_animatingToIndex == idx || _spinCtrl.isAnimating) return;
     _animatingToIndex = idx;
-
-    // زاوية القطاع المستهدف (يتوقف المؤشر عند منتصفه) + 4 لفات كاملة
     final segmentAngle = 2 * math.pi / _segments;
     final target = (4 * 2 * math.pi) + (idx * segmentAngle) + segmentAngle / 2;
-
     _rotation = Tween<double>(begin: 0, end: target).animate(
       CurvedAnimation(parent: _spinCtrl, curve: Curves.easeOutQuart),
     );
@@ -88,7 +83,7 @@ class _WheelGameScreenState extends State<WheelGameScreen>
     final user = context.read<AuthViewModel>().currentUser!;
     final session = _lastSession;
     if (session == null) return;
-    _animatingToIndex = null; // عجلة جديدة للجولة القادمة
+    _animatingToIndex = null;
     await context.read<GamesViewModel>().advanceOrFinish(
           coupleId: user.coupleId!,
           type: GameType.wheel,
@@ -105,32 +100,34 @@ class _WheelGameScreenState extends State<WheelGameScreen>
         context: context,
         barrierDismissible: false,
         builder: (ctx) => Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('🎡', style: TextStyle(fontSize: 56)),
-                const SizedBox(height: 12),
-                Text('خلصت العجلة!',
-                    style: Theme.of(ctx).textTheme.headlineMedium),
-                const SizedBox(height: 8),
-                Text(
-                  'جمعتما ${session.score} نقطة ⭐ و +15 عملة لكل واحد 🪙',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(height: 1.6),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('رجوع للألعاب'),
-                ),
-              ],
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🎡', style: TextStyle(fontSize: 52)),
+                  const SizedBox(height: 12),
+                  Text(
+                    'خلصت العجلة!',
+                    style: Theme.of(ctx).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'جمعتما ${session.score} نقطة ⭐ و +15 عملة لكل واحد 🪙',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.6),
+                  ),
+                  const SizedBox(height: 22),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('رجوع للألعاب'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -170,131 +167,170 @@ class _WheelGameScreenState extends State<WheelGameScreen>
               final iAnswered = round.answeredBy(user.uid);
               final revealed = round.bothAnswered;
 
-              // الطرف الآخر لفّ من جهازه؟ حرّك عجلتنا لنفس النتيجة
               if (spun && _animatingToIndex != round.wheelIndex) {
                 WidgetsBinding.instance.addPostFrameCallback(
-                    (_) => _animateTo(round.wheelIndex!));
+                  (_) => _animateTo(round.wheelIndex!),
+                );
               }
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                child: Column(
-                  children: [
-                    Text(
-                      'اللفة ${session.currentRound + 1} من ${session.rounds.length} — ⭐ ${session.score}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 16),
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+                  final padding = width < 380 ? 12.0 : width < 700 ? 18.0 : 24.0;
+                  final wheelDiameter =
+                      (width - (padding * 2) - 16).clamp(210.0, 300.0).toDouble();
+                  final wheelHeight = wheelDiameter + 38;
 
-                    // ===== العجلة =====
-                    SizedBox(
-                      width: 280,
-                      height: 300,
-                      child: Stack(
-                        alignment: Alignment.topCenter,
-                        children: [
-                          Positioned(
-                            top: 20,
-                            child: AnimatedBuilder(
-                              animation: _spinCtrl,
-                              builder: (context, child) => Transform.rotate(
-                                // سالب: العجلة تدور والمؤشر ثابت أعلاها
-                                angle: -(_rotation?.value ?? 0),
-                                child: child,
-                              ),
-                              child: CustomPaint(
-                                size: const Size(260, 260),
-                                painter: _WheelPainter(),
+                  return SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.fromLTRB(padding, 8, padding, 28),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 680),
+                        child: Column(
+                          children: [
+                            Text(
+                              'اللفة ${session.currentRound + 1} من ${session.rounds.length} — ⭐ ${session.score}',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: wheelDiameter + 20,
+                              height: wheelHeight,
+                              child: Stack(
+                                alignment: Alignment.topCenter,
+                                children: [
+                                  Positioned(
+                                    top: 20,
+                                    child: AnimatedBuilder(
+                                      animation: _spinCtrl,
+                                      builder: (context, child) => Transform.rotate(
+                                        angle: -(_rotation?.value ?? 0),
+                                        child: child,
+                                      ),
+                                      child: CustomPaint(
+                                        size: Size(wheelDiameter, wheelDiameter),
+                                        painter: _WheelPainter(),
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    size: wheelDiameter < 240 ? 44 : 52,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          // المؤشر
-                          const Icon(Icons.arrow_drop_down_rounded,
-                              size: 52, color: AppColors.textPrimary),
-                        ],
+                            const SizedBox(height: 6),
+                            if (!spun)
+                              ElevatedButton.icon(
+                                onPressed: _spin,
+                                icon: const Icon(Icons.casino_rounded),
+                                label: const Text('لفّ العجلة!'),
+                              )
+                                  .animate()
+                                  .fadeIn()
+                                  .scale(begin: const Offset(0.9, 0.9))
+                            else ...[
+                              Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(width < 380 ? 14 : 18),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        'التحدي 🔥',
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        round.prompt,
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(height: 1.55),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
+                              const SizedBox(height: 16),
+                              if (revealed) ...[
+                                Text(
+                                  'أنتما الاثنان جاوبتما ✅',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: _next,
+                                  child: Text(
+                                    session.isLastRound
+                                        ? 'إنهاء اللعبة 🏁'
+                                        : 'لفة جديدة 🎡',
+                                  ),
+                                ),
+                              ] else if (iAnswered)
+                                Text(
+                                  'بانتظار شريكك… 💗',
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                )
+                                    .animate(
+                                      onPlay: (c) => c.repeat(reverse: true),
+                                    )
+                                    .fadeIn(duration: 700.ms)
+                              else
+                                LayoutBuilder(
+                                  builder: (context, answerConstraints) {
+                                    final oneColumn = answerConstraints.maxWidth < 360;
+                                    final optionWidth = oneColumn
+                                        ? answerConstraints.maxWidth
+                                        : (answerConstraints.maxWidth - 10) / 2;
+                                    return Wrap(
+                                      spacing: 10,
+                                      runSpacing: 10,
+                                      alignment: WrapAlignment.center,
+                                      children: GamesContent.wheelOptions
+                                          .map(
+                                            (option) => SizedBox(
+                                              width: optionWidth,
+                                              child: OutlinedButton(
+                                                onPressed: () => _answer(option),
+                                                style: OutlinedButton.styleFrom(
+                                                  minimumSize: const Size(0, 52),
+                                                  side: const BorderSide(
+                                                    color: AppColors.secondary,
+                                                    width: 1.5,
+                                                  ),
+                                                  foregroundColor: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(16),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  option,
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                    );
+                                  },
+                                ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
-
-                    const SizedBox(height: 8),
-
-                    // ===== حالات الجولة =====
-                    if (!spun)
-                      ElevatedButton.icon(
-                        onPressed: _spin,
-                        icon: const Icon(Icons.casino_rounded),
-                        label: const Text('لفّ العجلة!'),
-                      ).animate().fadeIn().scale(begin: const Offset(0.9, 0.9))
-                    else ...[
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            children: [
-                              Text('التحدي 🔥',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium),
-                              const SizedBox(height: 8),
-                              Text(
-                                round.prompt,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(height: 1.6),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
-                      const SizedBox(height: 16),
-                      if (revealed) ...[
-                        Text(
-                          'أنتما الاثنان جاوبتما ✅',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: _next,
-                          child: Text(session.isLastRound
-                              ? 'إنهاء اللعبة 🏁'
-                              : 'لفة جديدة 🎡'),
-                        ),
-                      ] else if (iAnswered)
-                        Text(
-                          'بانتظار شريكك… 💗',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        )
-                            .animate(onPlay: (c) => c.repeat(reverse: true))
-                            .fadeIn(duration: 700.ms)
-                      else
-                        Row(
-                          children: GamesContent.wheelOptions.map((o) {
-                            return Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6),
-                                child: OutlinedButton(
-                                  onPressed: () => _answer(o),
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size(0, 52),
-                                    side: const BorderSide(
-                                        color: AppColors.secondary,
-                                        width: 1.5),
-                                    foregroundColor: AppColors.textPrimary,
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16)),
-                                  ),
-                                  child: Text(o),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                    ],
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),
@@ -315,7 +351,6 @@ class _WheelGameScreenState extends State<WheelGameScreen>
   }
 }
 
-/// رسم العجلة: 8 قطاعات بألوان الهوية مع إيموجي كل تحدٍ
 class _WheelPainter extends CustomPainter {
   static const List<Color> _colors = [
     AppColors.primary,
@@ -337,19 +372,22 @@ class _WheelPainter extends CustomPainter {
 
     for (var i = 0; i < _colors.length; i++) {
       paint.color = _colors[i];
-      // القطاع i يتمركز أعلى العجلة عند دورانها بزاوية i*segment
       final start = -math.pi / 2 + (i * segmentAngle) - segmentAngle / 2;
-      canvas.drawArc(Rect.fromCircle(center: center, radius: radius), start,
-          segmentAngle, true, paint);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        start,
+        segmentAngle,
+        true,
+        paint,
+      );
     }
 
-    // إيموجي كل قطاع
+    final emojiSize = (size.width * 0.085).clamp(16.0, 24.0).toDouble();
     for (var i = 0; i < _colors.length; i++) {
       final angle = -math.pi / 2 + (i * segmentAngle);
-      final emoji =
-          GamesContent.wheelItems[i].split(' ').last; // آخر جزء = الإيموجي
+      final emoji = GamesContent.wheelItems[i].split(' ').last;
       final tp = TextPainter(
-        text: TextSpan(text: emoji, style: const TextStyle(fontSize: 22)),
+        text: TextSpan(text: emoji, style: TextStyle(fontSize: emojiSize)),
         textDirection: TextDirection.ltr,
       )..layout();
       final pos = Offset(
@@ -359,14 +397,16 @@ class _WheelPainter extends CustomPainter {
       tp.paint(canvas, pos);
     }
 
-    // مركز العجلة
-    canvas.drawCircle(center, 26, Paint()..color = Colors.white);
+    final centerRadius = (size.width * 0.1).clamp(20.0, 28.0).toDouble();
+    canvas.drawCircle(center, centerRadius, Paint()..color = Colors.white);
     final heart = TextPainter(
-      text: const TextSpan(text: '💗', style: TextStyle(fontSize: 24)),
+      text: TextSpan(
+        text: '💗',
+        style: TextStyle(fontSize: centerRadius * 0.92),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
-    heart.paint(
-        canvas, center - Offset(heart.width / 2, heart.height / 2));
+    heart.paint(canvas, center - Offset(heart.width / 2, heart.height / 2));
   }
 
   @override
