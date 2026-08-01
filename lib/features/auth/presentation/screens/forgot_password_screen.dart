@@ -30,8 +30,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     final vm = context.read<AuthViewModel>();
     final ok = await vm.resetPassword(_emailCtrl.text);
-
     if (!mounted) return;
+
     if (ok) {
       setState(() => _sent = true);
     } else {
@@ -48,79 +48,101 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthViewModel>().isLoading;
+    final media = MediaQuery.of(context);
+    final compact = media.size.width < 420 || media.size.height < 620;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(title: const Text('استعادة كلمة المرور')),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-          child: _sent
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.mark_email_read_rounded,
-                              size: 80, color: AppColors.success)
-                          .animate()
-                          .scale(curve: Curves.easeOutBack, duration: 500.ms),
-                      const SizedBox(height: 20),
-                      Text('تم الإرسال ✅',
-                          style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 10),
-                      Text(
-                        'أرسلنا رابط استعادة كلمة المرور إلى بريدك.\nتحقق من صندوق الوارد (أو الرسائل غير المرغوبة).',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(height: 1.7),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                compact ? 16 : 24,
+                compact ? 12 : 20,
+                compact ? 16 : 24,
+                media.viewInsets.bottom + 24,
+              ),
+              child: _sent
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.mark_email_read_rounded,
+                          size: compact ? 64 : 80,
+                          color: AppColors.success,
+                        )
+                            .animate()
+                            .scale(curve: Curves.easeOutBack, duration: 500.ms),
+                        const SizedBox(height: 18),
+                        Text(
+                          'تم الإرسال ✅',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'أرسلنا رابط استعادة كلمة المرور إلى بريدك.\nتحقق من صندوق الوارد (أو الرسائل غير المرغوبة).',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(height: 1.7),
+                        ),
+                      ],
+                    )
+                  : Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Icon(
+                            Icons.lock_reset_rounded,
+                            size: compact ? 58 : 72,
+                            color: AppColors.primary,
+                          )
+                              .animate()
+                              .scale(curve: Curves.easeOutBack, duration: 500.ms),
+                          const SizedBox(height: 18),
+                          Text(
+                            'اكتب بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(height: 1.7),
+                          ),
+                          SizedBox(height: compact ? 22 : 28),
+                          AppTextField(
+                            controller: _emailCtrl,
+                            hint: 'البريد الإلكتروني',
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.done,
+                            validator: Validators.email,
+                          ),
+                          const SizedBox(height: 22),
+                          ElevatedButton(
+                            onPressed: isLoading ? null : _submit,
+                            child: isLoading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : const Text('إرسال الرابط'),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                )
-              : Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 12),
-                      const Icon(Icons.lock_reset_rounded,
-                              size: 72, color: AppColors.primary)
-                          .animate()
-                          .scale(curve: Curves.easeOutBack, duration: 500.ms),
-                      const SizedBox(height: 20),
-                      Text(
-                        'اكتب بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(height: 1.7),
-                      ),
-                      const SizedBox(height: 28),
-                      AppTextField(
-                        controller: _emailCtrl,
-                        hint: 'البريد الإلكتروني',
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.done,
-                        validator: Validators.email,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: isLoading ? null : _submit,
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2.5),
-                              )
-                            : const Text('إرسال الرابط'),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+            ),
+          ),
         ),
       ),
     );
