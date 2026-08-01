@@ -1,28 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// ثيم التطبيق — فاتح وليلي
-/// نستخدم خط Cairo لأنه أنيق ويدعم العربية بشكل ممتاز
+/// ثيم التطبيق — فاتح وليلي.
+///
+/// نستخدم خطوط النظام بدل تحميل Google Fonts وقت التشغيل. هذا يمنع اختفاء
+/// النصوص في Flutter Web عند حجب fonts.gstatic.com أو تعذر تحميل الخط.
 class AppTheme {
   AppTheme._();
 
   static TextTheme _textTheme(Color primaryColor, Color secondaryColor) {
     return TextTheme(
-      displayLarge: GoogleFonts.cairo(
-          fontSize: 32, fontWeight: FontWeight.bold, color: primaryColor),
-      headlineMedium: GoogleFonts.cairo(
-          fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
-      titleLarge: GoogleFonts.cairo(
-          fontSize: 18, fontWeight: FontWeight.w600, color: primaryColor),
-      bodyLarge: GoogleFonts.cairo(fontSize: 16, color: primaryColor),
-      bodyMedium: GoogleFonts.cairo(fontSize: 14, color: secondaryColor),
-      labelLarge: GoogleFonts.cairo(
-          fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+      displayLarge: TextStyle(
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        color: primaryColor,
+      ),
+      headlineMedium: TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: primaryColor,
+      ),
+      titleLarge: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: primaryColor,
+      ),
+      bodyLarge: TextStyle(fontSize: 16, color: primaryColor),
+      bodyMedium: TextStyle(fontSize: 14, color: secondaryColor),
+      labelLarge: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+      ),
     );
   }
 
-  // ===== الوضع الفاتح =====
   static ThemeData get light {
     return ThemeData(
       useMaterial3: true,
@@ -35,16 +47,16 @@ class AppTheme {
         error: AppColors.error,
       ),
       textTheme: _textTheme(AppColors.textPrimary, AppColors.textSecondary),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.cairo(
+        titleTextStyle: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: AppColors.textPrimary,
         ),
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       cardTheme: CardTheme(
         color: AppColors.card,
@@ -57,17 +69,19 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 52),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          textStyle:
-              GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -76,12 +90,11 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        hintStyle: GoogleFonts.cairo(color: AppColors.textSecondary),
+        hintStyle: const TextStyle(color: AppColors.textSecondary),
       ),
     );
   }
 
-  // ===== الوضع الليلي =====
   static ThemeData get dark {
     return ThemeData(
       useMaterial3: true,
@@ -93,18 +106,20 @@ class AppTheme {
         surface: AppColors.darkSurface,
         error: AppColors.error,
       ),
-      textTheme:
-          _textTheme(AppColors.darkTextPrimary, AppColors.darkTextSecondary),
-      appBarTheme: AppBarTheme(
+      textTheme: _textTheme(
+        AppColors.darkTextPrimary,
+        AppColors.darkTextSecondary,
+      ),
+      appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.cairo(
+        titleTextStyle: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: AppColors.darkTextPrimary,
         ),
-        iconTheme: const IconThemeData(color: AppColors.darkTextPrimary),
+        iconTheme: IconThemeData(color: AppColors.darkTextPrimary),
       ),
       cardTheme: CardTheme(
         color: AppColors.darkCard,
@@ -116,17 +131,19 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 52),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          textStyle:
-              GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.bold),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.darkSurface,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -135,7 +152,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        hintStyle: GoogleFonts.cairo(color: AppColors.darkTextSecondary),
+        hintStyle: const TextStyle(color: AppColors.darkTextSecondary),
       ),
     );
   }
