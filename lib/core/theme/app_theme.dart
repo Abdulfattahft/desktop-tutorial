@@ -1,36 +1,48 @@
 import 'package:flutter/material.dart';
+
+import '../services/web_font_service.dart';
 import 'app_colors.dart';
 
 /// ثيم التطبيق — فاتح وليلي.
-///
-/// نستخدم خطوط النظام بدل تحميل Google Fonts وقت التشغيل. هذا يمنع اختفاء
-/// النصوص في Flutter Web عند حجب fonts.gstatic.com أو تعذر تحميل الخط.
 class AppTheme {
   AppTheme._();
 
+  static TextStyle _style({
+    required Color color,
+    required double size,
+    FontWeight? weight,
+  }) {
+    return TextStyle(
+      fontFamily: WebFontService.family,
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+    );
+  }
+
   static TextTheme _textTheme(Color primaryColor, Color secondaryColor) {
     return TextTheme(
-      displayLarge: TextStyle(
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
+      displayLarge: _style(
         color: primaryColor,
+        size: 32,
+        weight: FontWeight.bold,
       ),
-      headlineMedium: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
+      headlineMedium: _style(
         color: primaryColor,
+        size: 24,
+        weight: FontWeight.bold,
       ),
-      titleLarge: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+      titleLarge: _style(
         color: primaryColor,
+        size: 18,
+        weight: FontWeight.w600,
       ),
-      bodyLarge: TextStyle(fontSize: 16, color: primaryColor),
-      bodyMedium: TextStyle(fontSize: 14, color: secondaryColor),
-      labelLarge: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
+      bodyLarge: _style(color: primaryColor, size: 16),
+      bodyMedium: _style(color: secondaryColor, size: 14),
+      labelLarge: _style(
         color: Colors.white,
+        size: 15,
+        weight: FontWeight.w600,
       ),
     );
   }
@@ -39,6 +51,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      fontFamily: WebFontService.family,
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
@@ -47,16 +60,16 @@ class AppTheme {
         error: AppColors.error,
       ),
       textTheme: _textTheme(AppColors.textPrimary, AppColors.textSecondary),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+        titleTextStyle: _style(
           color: AppColors.textPrimary,
+          size: 20,
+          weight: FontWeight.bold,
         ),
-        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       cardTheme: CardTheme(
         color: AppColors.card,
@@ -72,9 +85,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+          textStyle: _style(
+            color: Colors.white,
+            size: 16,
+            weight: FontWeight.bold,
           ),
         ),
       ),
@@ -90,7 +104,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        hintStyle: const TextStyle(color: AppColors.textSecondary),
+        hintStyle: _style(color: AppColors.textSecondary, size: 14),
       ),
     );
   }
@@ -99,6 +113,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      fontFamily: WebFontService.family,
       scaffoldBackgroundColor: AppColors.darkBackground,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
@@ -110,16 +125,16 @@ class AppTheme {
         AppColors.darkTextPrimary,
         AppColors.darkTextSecondary,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+        titleTextStyle: _style(
           color: AppColors.darkTextPrimary,
+          size: 20,
+          weight: FontWeight.bold,
         ),
-        iconTheme: IconThemeData(color: AppColors.darkTextPrimary),
+        iconTheme: const IconThemeData(color: AppColors.darkTextPrimary),
       ),
       cardTheme: CardTheme(
         color: AppColors.darkCard,
@@ -134,9 +149,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+          textStyle: _style(
+            color: Colors.white,
+            size: 16,
+            weight: FontWeight.bold,
           ),
         ),
       ),
@@ -152,7 +168,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
-        hintStyle: const TextStyle(color: AppColors.darkTextSecondary),
+        hintStyle: _style(color: AppColors.darkTextSecondary, size: 14),
       ),
     );
   }
