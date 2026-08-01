@@ -56,14 +56,25 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthViewModel>().isLoading;
+    final media = MediaQuery.of(context);
+    final compact = media.size.width < 420 || media.size.height < 650;
+    final horizontal = media.size.width < 420 ? 16.0 : 24.0;
+    final logoSize = compact ? 68.0 : 84.0;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                horizontal,
+                compact ? 16 : 24,
+                horizontal,
+                media.viewInsets.bottom + 24,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -71,23 +82,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Align(
                       child: Container(
-                        width: 84,
-                        height: 84,
+                        width: logoSize,
+                        height: logoSize,
                         decoration: const BoxDecoration(
                           gradient: AppColors.romanticGradient,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.favorite_rounded,
                           color: Colors.white,
-                          size: 40,
+                          size: compact ? 32 : 40,
                         ),
                       ),
                     ).animate().scale(
                           duration: 500.ms,
                           curve: Curves.easeOutBack,
                         ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: compact ? 14 : 20),
                     Text(
                       'أهلًا بعودتك 💕',
                       textAlign: TextAlign.center,
@@ -99,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ).animate().fadeIn(delay: 250.ms),
-                    const SizedBox(height: 36),
+                    SizedBox(height: compact ? 24 : 36),
                     AppTextField(
                       controller: _emailCtrl,
                       hint: 'البريد الإلكتروني',
@@ -107,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       validator: Validators.email,
                     ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     AppTextField(
                       controller: _passwordCtrl,
                       hint: 'كلمة المرور',
@@ -134,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     ElevatedButton(
                       onPressed: isLoading ? null : _submit,
                       child: isLoading
@@ -148,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             )
                           : const Text('تسجيل الدخول'),
                     ).animate().fadeIn(delay: 500.ms),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
                     Wrap(
                       alignment: WrapAlignment.center,
                       crossAxisAlignment: WrapCrossAlignment.center,
