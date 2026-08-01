@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
@@ -13,7 +13,6 @@ import '../../data/models/challenge_models.dart';
 import '../viewmodels/challenges_viewmodel.dart';
 import '../widgets/challenge_card.dart';
 
-/// شاشة التحديات — يومية وأسبوعية بتحديث لحظي
 class ChallengesScreen extends StatefulWidget {
   const ChallengesScreen({super.key});
 
@@ -31,10 +30,9 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
   @override
   void initState() {
     super.initState();
-    // عداد الوقت المتبقي يحدث كل دقيقة
-    _ticker =
-        Timer.periodic(const Duration(minutes: 1), (_) => setState(() {}));
-    // توليد تحديات اليوم إن لم تكن موجودة
+    _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final coupleId = context.read<AuthViewModel>().currentUser?.coupleId;
       if (coupleId != null) {
@@ -72,12 +70,14 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
       playerIds: [user.uid, user.partnerId!],
     );
     if (!mounted) return;
+
     if (ok) {
       _confetti.play();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              '🎉 مبروك! +${c.rewardPoints} نقطة و +${c.rewardCoins} عملة لكل واحد'),
+            '🎉 مبروك! +${c.rewardPoints} نقطة و +${c.rewardCoins} عملة لكل واحد',
+          ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -108,9 +108,9 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
     if (user == null || !user.isLinked) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
     final vm = context.read<ChallengesViewModel>();
     final homeVm = context.read<HomeViewModel>();
-
     _coupleStream ??= homeVm.coupleStream(user.coupleId!);
     _challengesStream ??= vm.challengesStream(user.coupleId!);
 
@@ -120,7 +120,6 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
         alignment: Alignment.topCenter,
         children: [
           SafeArea(
-            // نحتاج بيانات الزوجين (ستريك + عداد الألعاب) لحساب التقدم لحظيًا
             child: StreamBuilder<CoupleModel?>(
               stream: _coupleStream,
               builder: (context, coupleSnap) {
@@ -128,15 +127,16 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
                 if (couple == null) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 return StreamBuilder<List<ChallengeModel>>(
                   stream: _challengesStream,
                   builder: (context, snap) {
                     final all = snap.data ?? const [];
                     if (snap.connectionState == ConnectionState.waiting &&
                         all.isEmpty) {
-                      return const Center(
-                          child: CircularProgressIndicator());
+                      return const Center(child: CircularProgressIndicator());
                     }
+
                     final daily = all
                         .where((c) => c.period == ChallengePeriod.daily)
                         .toList();
@@ -149,64 +149,76 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
                           gamesTotal: couple.gamesPlayedTotal,
                         );
 
-                    return ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      children: [
-                        if (daily.isNotEmpty) ...[
-                          _SectionHeader(
-                            title: 'تحديات اليوم ☀️',
-                            subtitle: _remaining(daily.first.expiresAt),
-                          ),
-                          const SizedBox(height: 12),
-                          ...daily.asMap().entries.map(
-                                (e) => ChallengeCard(
-                                  challenge: e.value,
-                                  progress: progressOf(e.value),
-                                  myUid: user.uid,
-                                  onMarkDone: () => _markDone(e.value),
-                                  onClaim: () => _claim(e.value),
-                                )
-                                    .animate()
-                                    .fadeIn(delay: (100 * e.key).ms)
-                                    .slideY(begin: 0.1),
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final padding = constraints.maxWidth < 380
+                            ? 12.0
+                            : constraints.maxWidth < 700
+                                ? 16.0
+                                : 24.0;
+
+                        return ListView(
+                          padding: EdgeInsets.fromLTRB(padding, 8, padding, 28),
+                          children: [
+                            if (daily.isNotEmpty) ...[
+                              _SectionHeader(
+                                title: 'تحديات اليوم ☀️',
+                                subtitle: _remaining(daily.first.expiresAt),
                               ),
-                        ],
-                        if (weekly.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          _SectionHeader(
-                            title: 'تحدي الأسبوع 🏆',
-                            subtitle: _remaining(weekly.first.expiresAt),
-                          ),
-                          const SizedBox(height: 12),
-                          ...weekly.map(
-                            (c) => ChallengeCard(
-                              challenge: c,
-                              progress: progressOf(c),
-                              myUid: user.uid,
-                              onMarkDone: () => _markDone(c),
-                              onClaim: () => _claim(c),
-                            ).animate().fadeIn(delay: 300.ms).slideY(
-                                begin: 0.1),
-                          ),
-                        ],
-                        if (all.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 60),
-                            child: Column(
-                              children: [
-                                const Text('🎯',
-                                    style: TextStyle(fontSize: 48)),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'جارٍ تجهيز تحديات اليوم…',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge,
+                              const SizedBox(height: 12),
+                              ...daily.asMap().entries.map(
+                                    (entry) => ChallengeCard(
+                                      challenge: entry.value,
+                                      progress: progressOf(entry.value),
+                                      myUid: user.uid,
+                                      onMarkDone: () => _markDone(entry.value),
+                                      onClaim: () => _claim(entry.value),
+                                    )
+                                        .animate()
+                                        .fadeIn(delay: (100 * entry.key).ms)
+                                        .slideY(begin: 0.1),
+                                  ),
+                            ],
+                            if (weekly.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              _SectionHeader(
+                                title: 'تحدي الأسبوع 🏆',
+                                subtitle: _remaining(weekly.first.expiresAt),
+                              ),
+                              const SizedBox(height: 12),
+                              ...weekly.map(
+                                (challenge) => ChallengeCard(
+                                  challenge: challenge,
+                                  progress: progressOf(challenge),
+                                  myUid: user.uid,
+                                  onMarkDone: () => _markDone(challenge),
+                                  onClaim: () => _claim(challenge),
+                                ).animate().fadeIn(delay: 300.ms).slideY(
+                                      begin: 0.1,
+                                    ),
+                              ),
+                            ],
+                            if (all.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 60),
+                                child: Column(
+                                  children: [
+                                    const Text(
+                                      '🎯',
+                                      style: TextStyle(fontSize: 48),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'جارٍ تجهيز تحديات اليوم…',
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context).textTheme.bodyLarge,
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                      ],
+                              ),
+                          ],
+                        );
+                      },
                     );
                   },
                 );
@@ -238,25 +250,56 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 410;
+        final badge = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
             subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primaryDark),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryDark,
+            ),
           ),
-        ),
-      ],
+        );
+
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: badge,
+              ),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(child: badge),
+          ],
+        );
+      },
     );
   }
 }
