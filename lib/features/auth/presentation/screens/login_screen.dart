@@ -40,7 +40,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
     if (ok) {
-      // إذا لم يرتبط بشريك بعد → شاشة الربط، وإلا → الرئيسية
       final linked = vm.currentUser?.isLinked ?? false;
       context.go(linked ? AppRoutes.home : AppRoutes.linkPartner);
     } else {
@@ -61,106 +60,117 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // الشعار
-                  Container(
-                    width: 84,
-                    height: 84,
-                    decoration: const BoxDecoration(
-                      gradient: AppColors.romanticGradient,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.favorite_rounded,
-                        color: Colors.white, size: 40),
-                  ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
-
-                  const SizedBox(height: 20),
-
-                  Text('أهلًا بعودتك 💕',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium)
-                      .animate()
-                      .fadeIn(delay: 150.ms),
-                  const SizedBox(height: 6),
-                  Text('سجّل دخولك وكمّل رحلتكما',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium)
-                      .animate()
-                      .fadeIn(delay: 250.ms),
-
-                  const SizedBox(height: 36),
-
-                  AppTextField(
-                    controller: _emailCtrl,
-                    hint: 'البريد الإلكتروني',
-                    icon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: Validators.email,
-                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
-
-                  const SizedBox(height: 16),
-
-                  AppTextField(
-                    controller: _passwordCtrl,
-                    hint: 'كلمة المرور',
-                    icon: Icons.lock_outline_rounded,
-                    obscure: _obscure,
-                    textInputAction: TextInputAction.done,
-                    validator: Validators.password,
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscure
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined),
-                      onPressed: () => setState(() => _obscure = !_obscure),
-                    ),
-                  ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
-
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: TextButton(
-                      onPressed: () => context.push(AppRoutes.forgotPassword),
-                      child: const Text('نسيت كلمة المرور؟',
-                          style: TextStyle(color: AppColors.primaryDark)),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  ElevatedButton(
-                    onPressed: isLoading ? null : _submit,
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2.5),
-                          )
-                        : const Text('تسجيل الدخول'),
-                  ).animate().fadeIn(delay: 500.ms),
-
-                  const SizedBox(height: 20),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('ما عندك حساب؟',
-                          style: Theme.of(context).textTheme.bodyMedium),
-                      TextButton(
-                        onPressed: () => context.push(AppRoutes.register),
-                        child: const Text('أنشئ حسابًا',
-                            style: TextStyle(
-                                color: AppColors.primaryDark,
-                                fontWeight: FontWeight.bold)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      child: Container(
+                        width: 84,
+                        height: 84,
+                        decoration: const BoxDecoration(
+                          gradient: AppColors.romanticGradient,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.favorite_rounded,
+                          color: Colors.white,
+                          size: 40,
+                        ),
                       ),
-                    ],
-                  ).animate().fadeIn(delay: 600.ms),
-                ],
+                    ).animate().scale(
+                          duration: 500.ms,
+                          curve: Curves.easeOutBack,
+                        ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'أهلًا بعودتك 💕',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ).animate().fadeIn(delay: 150.ms),
+                    const SizedBox(height: 6),
+                    Text(
+                      'سجّل دخولك وكمّل رحلتكما',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ).animate().fadeIn(delay: 250.ms),
+                    const SizedBox(height: 36),
+                    AppTextField(
+                      controller: _emailCtrl,
+                      hint: 'البريد الإلكتروني',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                      validator: Validators.email,
+                    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+                    const SizedBox(height: 16),
+                    AppTextField(
+                      controller: _passwordCtrl,
+                      hint: 'كلمة المرور',
+                      icon: Icons.lock_outline_rounded,
+                      obscure: _obscure,
+                      textInputAction: TextInputAction.done,
+                      validator: Validators.password,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscure
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: TextButton(
+                        onPressed: () => context.push(AppRoutes.forgotPassword),
+                        child: const Text(
+                          'نسيت كلمة المرور؟',
+                          style: TextStyle(color: AppColors.primaryDark),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text('تسجيل الدخول'),
+                    ).animate().fadeIn(delay: 500.ms),
+                    const SizedBox(height: 20),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'ما عندك حساب؟',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        TextButton(
+                          onPressed: () => context.push(AppRoutes.register),
+                          child: const Text(
+                            'أنشئ حسابًا',
+                            style: TextStyle(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(delay: 600.ms),
+                  ],
+                ),
               ),
             ),
           ),
