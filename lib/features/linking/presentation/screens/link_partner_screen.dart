@@ -10,10 +10,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/viewmodels/auth_viewmodel.dart';
 import '../viewmodels/linking_viewmodel.dart';
 
-/// شاشة ربط الشريكين
-/// - تعرض رمز دعوة المستخدم مع نسخ ومشاركة
-/// - تستقبل رمز الشريك وتتحقق منه من Firestore
-/// - تستمع لحظيًا: لو الشريك ربطك من جهازه تنتقل تلقائيًا
 class LinkPartnerScreen extends StatefulWidget {
   const LinkPartnerScreen({super.key});
 
@@ -24,8 +20,6 @@ class LinkPartnerScreen extends StatefulWidget {
 class _LinkPartnerScreenState extends State<LinkPartnerScreen> {
   final _codeCtrl = TextEditingController();
   late final LinkingViewModel _linkVm;
-
-  /// حارس يمنع ظهور رسالة النجاح أكثر من مرة مهما كان مصدرها
   bool _handledSuccess = false;
 
   @override
@@ -33,16 +27,12 @@ class _LinkPartnerScreenState extends State<LinkPartnerScreen> {
     super.initState();
     _linkVm = context.read<LinkingViewModel>();
     _linkVm.addListener(_onLinkVmChanged);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final myUid = context.read<AuthViewModel>().currentUser?.uid;
-      if (myUid != null) {
-        _linkVm.watchMyAccount(myUid);
-      }
+      if (myUid != null) _linkVm.watchMyAccount(myUid);
     });
   }
 
-  /// يُستدعى عند أي تغيير في ViewModel — خارج build (النمط الصحيح)
   void _onLinkVmChanged() {
     if (_linkVm.linkedByPartner && !_handledSuccess && mounted) {
       _handledSuccess = true;
@@ -75,7 +65,7 @@ class _LinkPartnerScreenState extends State<LinkPartnerScreen> {
     await Share.share(
       '💕 $name يدعوك للانضمام إليه في تطبيق "بيننا"\n\n'
       'رمز الدعوة: $code\n\n'
-      'حمّل التطبيق وأدخل الرمز لنرتبط معًا!',
+      'افتح الموقع وأدخل الرمز لنرتبط معًا!',
     );
   }
 
@@ -84,7 +74,10 @@ class _LinkPartnerScreenState extends State<LinkPartnerScreen> {
     final myUid = context.read<AuthViewModel>().currentUser?.uid;
     if (myUid == null) return;
 
-    final ok = await _linkVm.linkWithCode(myUid: myUid, code: _codeCtrl.text);
+    final ok = await _linkVm.linkWithCode(
+      myUid: myUid,
+      code: _codeCtrl.text,
+    );
 
     if (!mounted) return;
     if (ok) {
@@ -103,9 +96,7 @@ class _LinkPartnerScreenState extends State<LinkPartnerScreen> {
     }
   }
 
-  /// رسالة نجاح جميلة ثم الانتقال للرئيسية
   Future<void> _showSuccessAndGo() async {
-    // تحديث بيانات المستخدم المحلية (partnerId أصبح موجودًا)
     await context.read<AuthViewModel>().loadCurrentUser();
     if (!mounted) return;
 
@@ -113,45 +104,56 @@ class _LinkPartnerScreenState extends State<LinkPartnerScreen> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: const BoxDecoration(
-                  gradient: AppColors.romanticGradient,
-                  shape: BoxShape.circle,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 82,
+                  height: 82,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.romanticGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.favorite_rounded,
+                    color: Colors.white,
+                    size: 42,
+                  ),
+                ).animate().scale(
+                      curve: Curves.elasticOut,
+                      duration: 800.ms,
+                    ),
+                const SizedBox(height: 18),
+                Text(
+                  'ارتبطتما بنجاح! 🎉',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(ctx).textTheme.headlineMedium,
                 ),
-                child: const Icon(Icons.favorite_rounded,
-                    color: Colors.white, size: 46),
-              ).animate().scale(curve: Curves.elasticOut, duration: 800.ms),
-              const SizedBox(height: 20),
-              Text('ارتبطتما بنجاح! 🎉',
-                  style: Theme.of(ctx).textTheme.headlineMedium),
-              const SizedBox(height: 8),
-              Text(
-                'من اليوم… كل لعبة وتحدٍ وذكرى بتكون بينكما',
-                textAlign: TextAlign.center,
-                style:
-                    Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.6),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('يلا نبدأ 💕'),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'من اليوم… كل لعبة وتحدٍ وذكرى بتكون بينكما',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.6),
+                ),
+                const SizedBox(height: 22),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('يلا نبدأ 💕'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
 
-    if (!mounted) return;
-    context.go(AppRoutes.home);
+    if (mounted) context.go(AppRoutes.home);
   }
 
   @override
@@ -160,8 +162,10 @@ class _LinkPartnerScreenState extends State<LinkPartnerScreen> {
     final linkVm = context.watch<LinkingViewModel>();
     final user = authVm.currentUser;
     final myCode = user?.inviteCode ?? '------';
+    final media = MediaQuery.of(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('ربط الشريك'),
         automaticallyImplyLeading: false,
@@ -177,169 +181,216 @@ class _LinkPartnerScreenState extends State<LinkPartnerScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'أهلًا ${user?.name ?? ''} 👋',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ).animate().fadeIn(),
-              const SizedBox(height: 6),
-              Text(
-                'خطوة واحدة تفصلكما… شارك رمزك مع شريكك أو أدخل رمزه',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(height: 1.6),
-              ).animate().fadeIn(delay: 100.ms),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 420;
+                final padding = compact ? 16.0 : 24.0;
+                final codeSize = constraints.maxWidth < 350 ? 23.0 : compact ? 27.0 : 32.0;
 
-              const SizedBox(height: 28),
-
-              // ===== بطاقة رمزي =====
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(
+                    padding,
+                    10,
+                    padding,
+                    media.viewInsets.bottom + 28,
+                  ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('رمز الدعوة الخاص بك',
-                          style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: 12),
-                      Directionality(
-                        textDirection: TextDirection.ltr,
-                        child: Text(
-                          myCode.split('').join(' '),
-                          style: Theme.of(context)
-                              .textTheme
-                              .displayLarge
-                              ?.copyWith(
-                                color: AppColors.primaryDark,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 2,
-                              ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _copyCode(myCode),
-                              icon: const Icon(Icons.copy_rounded, size: 20),
-                              label: const Text('نسخ'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.primaryDark,
-                                side:
-                                    const BorderSide(color: AppColors.primary),
-                                minimumSize: const Size(0, 48),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () =>
-                                  _shareCode(myCode, user?.name ?? ''),
-                              icon: const Icon(Icons.share_rounded, size: 20),
-                              label: const Text('مشاركة'),
-                              style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(0, 48)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.15),
-
-              const SizedBox(height: 24),
-
-              Row(
-                children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('أو',
-                        style: Theme.of(context).textTheme.bodyMedium),
-                  ),
-                  const Expanded(child: Divider()),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // ===== إدخال رمز الشريك =====
-              Text('عندك رمز شريكك؟ أدخله هنا:',
-                      style: Theme.of(context).textTheme.titleLarge)
-                  .animate()
-                  .fadeIn(delay: 300.ms),
-              const SizedBox(height: 14),
-
-              Directionality(
-                textDirection: TextDirection.ltr,
-                child: TextField(
-                  controller: _codeCtrl,
-                  textAlign: TextAlign.center,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 8,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        letterSpacing: 6,
-                        color: AppColors.primaryDark,
-                      ),
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    hintText: '• • • • • •',
-                  ),
-                ),
-              ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.15),
-
-              const SizedBox(height: 20),
-
-              ElevatedButton(
-                onPressed: linkVm.isLoading ? null : _submitCode,
-                child: linkVm.isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2.5),
-                      )
-                    : const Text('ربط الحسابين 💞'),
-              ).animate().fadeIn(delay: 500.ms),
-
-              const SizedBox(height: 20),
-
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline_rounded,
-                        color: AppColors.secondary, size: 22),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'لو شريكك أدخل رمزك من جهازه، بننقلك تلقائيًا — خلّ الشاشة مفتوحة',
+                      Text(
+                        'أهلًا ${user?.name ?? ''} 👋',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ).animate().fadeIn(),
+                      const SizedBox(height: 6),
+                      Text(
+                        'خطوة واحدة تفصلكما… شارك رمزك مع شريكك أو أدخل رمزه',
                         style: Theme.of(context)
                             .textTheme
                             .bodyMedium
-                            ?.copyWith(height: 1.5),
+                            ?.copyWith(height: 1.6),
+                      ).animate().fadeIn(delay: 100.ms),
+                      SizedBox(height: compact ? 20 : 28),
+                      Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(compact ? 16 : 20),
+                          child: Column(
+                            children: [
+                              Text(
+                                'رمز الدعوة الخاص بك',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 12),
+                              Directionality(
+                                textDirection: TextDirection.ltr,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    myCode.split('').join(' '),
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      color: AppColors.primaryDark,
+                                      fontSize: codeSize,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: compact ? 1.2 : 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              if (compact)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: () => _copyCode(myCode),
+                                      icon: const Icon(Icons.copy_rounded, size: 20),
+                                      label: const Text('نسخ الرمز'),
+                                      style: _copyStyle(),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    ElevatedButton.icon(
+                                      onPressed: () =>
+                                          _shareCode(myCode, user?.name ?? ''),
+                                      icon: const Icon(Icons.share_rounded, size: 20),
+                                      label: const Text('مشاركة الرمز'),
+                                      style: ElevatedButton.styleFrom(
+                                        minimumSize: const Size(0, 48),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => _copyCode(myCode),
+                                        icon: const Icon(Icons.copy_rounded, size: 20),
+                                        label: const Text('نسخ'),
+                                        style: _copyStyle(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () =>
+                                            _shareCode(myCode, user?.name ?? ''),
+                                        icon: const Icon(Icons.share_rounded, size: 20),
+                                        label: const Text('مشاركة'),
+                                        style: ElevatedButton.styleFrom(
+                                          minimumSize: const Size(0, 48),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                      ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.15),
+                      const SizedBox(height: 22),
+                      Row(
+                        children: [
+                          const Expanded(child: Divider()),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'أو',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                          const Expanded(child: Divider()),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ).animate().fadeIn(delay: 600.ms),
-            ],
+                      const SizedBox(height: 22),
+                      Text(
+                        'عندك رمز شريكك؟ أدخله هنا:',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ).animate().fadeIn(delay: 300.ms),
+                      const SizedBox(height: 14),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: TextField(
+                          controller: _codeCtrl,
+                          textAlign: TextAlign.center,
+                          textCapitalization: TextCapitalization.characters,
+                          maxLength: 8,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _submitCode(),
+                          style: TextStyle(
+                            fontSize: compact ? 21 : 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: compact ? 3 : 6,
+                            color: AppColors.primaryDark,
+                          ),
+                          decoration: const InputDecoration(
+                            counterText: '',
+                            hintText: '• • • • • •',
+                          ),
+                        ),
+                      ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.15),
+                      const SizedBox(height: 18),
+                      ElevatedButton(
+                        onPressed: linkVm.isLoading ? null : _submitCode,
+                        child: linkVm.isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text('ربط الحسابين 💞'),
+                      ).animate().fadeIn(delay: 500.ms),
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              color: AppColors.secondary,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'لو شريكك أدخل رمزك من جهازه، بننقلك تلقائيًا — خلّ الشاشة مفتوحة',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(height: 1.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ).animate().fadeIn(delay: 600.ms),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
+
+  ButtonStyle _copyStyle() => OutlinedButton.styleFrom(
+        foregroundColor: AppColors.primaryDark,
+        side: const BorderSide(color: AppColors.primary),
+        minimumSize: const Size(0, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      );
 }
