@@ -28,21 +28,20 @@ import 'features/notifications/presentation/viewmodels/notifications_viewmodel.d
 import 'features/settings/data/repositories/settings_repository.dart';
 import 'features/settings/presentation/viewmodels/settings_viewmodel.dart';
 import 'core/services/push_notification_service.dart';
+import 'core/services/web_font_service.dart';
 import 'core/config/web_firebase_options.dart';
 import 'features/linking/presentation/viewmodels/linking_viewmodel.dart';
-// ملاحظة: بعد تنفيذ flutterfire configure فعّل السطر التالي:
-// import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await WebFontService.load();
+
   const enablePathUrls = bool.fromEnvironment(
     'USE_PATH_URL_STRATEGY',
     defaultValue: true,
   );
   if (kIsWeb && enablePathUrls) usePathUrlStrategy();
 
-  // بعد flutterfire configure استبدل السطر التالي بـ:
-  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (kIsWeb) {
     if (!WebFirebaseOptions.isConfigured) {
       await initializeDateFormatting('ar');
@@ -54,15 +53,11 @@ Future<void> main() async {
     await Firebase.initializeApp();
   }
 
-  // معالج إشعارات الخلفية (يجب تسجيله قبل runApp)
   if (!kIsWeb) {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   }
 
-  // تهيئة تنسيق التواريخ بالعربية (لسجل الألعاب وغيره)
   await initializeDateFormatting('ar');
-
-  // تسجيل مزودي الذكاء الاصطناعي
   AIConfig.registerProviders();
 
   runApp(
@@ -73,13 +68,16 @@ Future<void> main() async {
         Provider<GamesRepository>(create: (_) => GamesRepository()),
         Provider<HomeRepository>(create: (_) => HomeRepository()),
         Provider<ChallengesRepository>(
-            create: (_) => ChallengesRepository()),
+          create: (_) => ChallengesRepository(),
+        ),
         Provider<MemoriesRepository>(create: (_) => MemoriesRepository()),
         Provider<GiftsRepository>(create: (_) => GiftsRepository()),
         Provider<NotificationsRepository>(
-            create: (_) => NotificationsRepository()),
+          create: (_) => NotificationsRepository(),
+        ),
         Provider<AIRepository>(
-            create: (_) => AIRepository(AIConfig.buildActive())),
+          create: (_) => AIRepository(AIConfig.buildActive()),
+        ),
         Provider<SettingsRepository>(create: (_) => SettingsRepository()),
         ChangeNotifierProvider<AuthViewModel>(
           create: (ctx) => AuthViewModel(ctx.read<AuthRepository>()),
@@ -106,14 +104,16 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider<NotificationsViewModel>(
           create: (ctx) => NotificationsViewModel(
-              ctx.read<NotificationsRepository>()),
+            ctx.read<NotificationsRepository>(),
+          ),
         ),
         ChangeNotifierProvider<AIViewModel>(
           create: (ctx) => AIViewModel(ctx.read<AIRepository>()),
         ),
         ChangeNotifierProvider<SettingsViewModel>(
-          create: (ctx) =>
-              SettingsViewModel(ctx.read<SettingsRepository>()),
+          create: (ctx) => SettingsViewModel(
+            ctx.read<SettingsRepository>(),
+          ),
         ),
       ],
       child: const BaynanaApp(),
@@ -130,6 +130,7 @@ class _FirebaseSetupApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'بيننا',
       locale: const Locale('ar'),
+      theme: ThemeData(fontFamily: WebFontService.family),
       home: Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
