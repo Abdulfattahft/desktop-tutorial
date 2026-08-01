@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      بيئة الإشعارات:
+      development  = أثناء التطوير على جهازك
+      production   = مطلوبة لـ TestFlight و App Store
+      Xcode يضبطها تلقائيًا عند تفعيل Push Notifications،
+      لكن تأكد أن نسخة Release تستخدم production
+    -->
+    <key>aps-environment</key>
+    <string>development</string>
+</dict>
+</plist>

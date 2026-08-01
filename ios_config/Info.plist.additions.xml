@@ -1,0 +1,67 @@
+<!--
+  ============================================================
+  إضافات Info.plist لتطبيق "بيننا"
+  المسار: ios/Runner/Info.plist
+  انسخ المفاتيح التالية داخل <dict> الرئيسي (قبل </dict> الأخير)
+  ============================================================
+-->
+
+<!-- ===== أذونات الاستخدام (إلزامية وإلا تُرفض المراجعة) ===== -->
+
+<!-- الوصول لمكتبة الصور لإضافة الذكريات -->
+<key>NSPhotoLibraryUsageDescription</key>
+<string>يحتاج "بيننا" للوصول إلى صورك حتى تتمكن من إضافة صور الذكريات التي تشاركها مع شريكك.</string>
+
+<!-- الحفظ في مكتبة الصور (لو أضفنا تنزيل الصور لاحقًا) -->
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>يحتاج "بيننا" للإذن بحفظ الصور في مكتبتك عند تنزيل ذكرياتكما.</string>
+
+<!-- الكاميرا لالتقاط صورة ذكرى مباشرة -->
+<key>NSCameraUsageDescription</key>
+<string>يحتاج "بيننا" إلى الكاميرا لالتقاط صور الذكريات مباشرة داخل التطبيق.</string>
+
+<!-- الميكروفون: مطلوب لأن image_picker يدعم الفيديو (حتى لو لم نستخدمه) -->
+<key>NSMicrophoneUsageDescription</key>
+<string>يستخدم "بيننا" الميكروفون فقط عند تسجيل مقاطع مصورة للذكريات.</string>
+
+<!-- ===== اللغة والاتجاه ===== -->
+<key>CFBundleDevelopmentRegion</key>
+<string>ar</string>
+
+<key>CFBundleLocalizations</key>
+<array>
+  <string>ar</string>
+  <string>en</string>
+</array>
+
+<!-- اسم التطبيق تحت الأيقونة -->
+<key>CFBundleDisplayName</key>
+<string>بيننا</string>
+
+<!-- ===== الإشعارات ===== -->
+<!-- false = استخدام APNs الإنتاجية عند بناء Release (مطلوب لـ TestFlight) -->
+<key>FirebaseAppDelegateProxyEnabled</key>
+<true/>
+
+<!-- ===== أوضاع الخلفية (Background Modes) ===== -->
+<key>UIBackgroundModes</key>
+<array>
+  <string>remote-notification</string>
+  <string>fetch</string>
+</array>
+
+<!-- ===== منع الوضع الأفقي (التطبيق مصمم عموديًا) ===== -->
+<key>UISupportedInterfaceOrientations</key>
+<array>
+  <string>UIInterfaceOrientationPortrait</string>
+</array>
+
+<key>UISupportedInterfaceOrientations~ipad</key>
+<array>
+  <string>UIInterfaceOrientationPortrait</string>
+  <string>UIInterfaceOrientationPortraitUpsideDown</string>
+</array>
+
+<!-- ===== لا يستخدم التطبيق تشفيرًا غير قياسي (يسرّع مراجعة التصدير) ===== -->
+<key>ITSAppUsesNonExemptEncryption</key>
+<false/>

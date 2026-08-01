@@ -1,0 +1,167 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ============ users ============
+    match /users/{userId} {
+
+      // السماح لطرف آخر بتحديث مستندي فقط في حالة الربط:
+      // - الحقلان المتغيران هما partnerId و coupleId فقط
+      // - لم أكن مرتبطًا من قبل (partnerId == null)
+      // - قيمة partnerId الجديدة هي uid الشخص الذي ينفذ العملية
+      function isPartnerLinkUpdate() {
+        return isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['partnerId', 'coupleId'])
+          && resource.data.partnerId == null
+          && request.resource.data.partnerId == request.auth.uid;
+      }
+
+      // القراءة لأي مستخدم مسجل — ضرورية للاستعلام برمز الدعوة
+      // (سنشددها لاحقًا بمجموعة inviteCodes منفصلة عند التحضير للإنتاج)
+      allow read: if isSignedIn();
+
+      // الإنشاء: صاحب الحساب فقط، وبدون ربط مسبق
+      allow create: if isSelf(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.partnerId == null
+        && request.resource.data.coupleId == null;
+
+      // السماح للشريك بفك ارتباطي عند تأكيد الفصل من طرفه
+      // (يغيّر partnerId و coupleId إلى null فقط)
+      function isPartnerUnlinkUpdate() {
+        return isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['partnerId', 'coupleId', 'previousCoupleId'])
+          && request.resource.data.partnerId == null
+          && resource.data.partnerId == request.auth.uid;
+      }
+
+      // التحديث: صاحب الحساب، أو شريك يربط، أو شريك يفصل
+      allow update: if isSelf(userId)
+        || isPartnerLinkUpdate()
+        || isPartnerUnlinkUpdate();
+
+      // الحذف: صاحب الحساب فقط (حذف الحساب من الإعدادات)
+      allow delete: if isSelf(userId);
+
+      // ===== الإشعارات =====
+      // القراءة والتعديل والحذف: صاحب الحساب فقط
+      // الإنشاء: صاحب الحساب أو شريكه (لإشعارات الأحداث)
+      match /notifications/{notifId} {
+        allow read, update, delete: if isSelf(userId);
+        allow create: if isSignedIn()
+          && (request.auth.uid == userId
+              || request.auth.uid ==
+                  get(/databases/$(database)/documents/users/$(userId))
+                    .data.partnerId);
+      }
+    }
+
+    // ============ couples ============
+    match /couples/{coupleId} {
+
+      // القراءة: أطراف العلاقة فقط
+      allow read: if isSignedIn()
+        && request.auth.uid in resource.data.userIds;
+
+      // الإنشاء: المنفذ أحد الطرفين، والمستند يضم طرفين اثنين بالضبط
+      allow create: if isSignedIn()
+        && request.auth.uid in request.resource.data.userIds
+        && request.resource.data.userIds.size() == 2;
+
+      // التحديث: أطراف العلاقة فقط (النقاط، موعد الزواج... في المراحل القادمة)
+      allow update: if isSignedIn()
+        && request.auth.uid in resource.data.userIds;
+
+      allow delete: if false;
+
+      // ===== جلسات الألعاب (لحظية) =====
+      match /sessions/{sessionId} {
+        allow read, write: if isSignedIn()
+          && request.auth.uid in
+              get(/databases/$(database)/documents/couples/$(coupleId))
+                .data.userIds;
+      }
+
+      // ===== التحديات =====
+      match /challenges/{challengeId} {
+        allow read, write: if isSignedIn()
+          && request.auth.uid in
+              get(/databases/$(database)/documents/couples/$(coupleId))
+                .data.userIds;
+      }
+
+      // ===== الهدايا =====
+      match /gifts/{giftId} {
+        function isMember() {
+          return isSignedIn()
+            && request.auth.uid in
+                get(/databases/$(database)/documents/couples/$(coupleId))
+                  .data.userIds;
+        }
+        allow read: if isMember();
+        // الإرسال: المرسل هو المنفذ، وغير مفتوحة عند الإنشاء
+        allow create: if isMember()
+          && request.resource.data.fromUid == request.auth.uid
+          && request.resource.data.opened == false;
+        // الفتح/الرد/المشاهدة: المستلم فقط، وبدون تغيير بيانات الهدية الأساسية
+        allow update: if isMember()
+          && request.auth.uid == resource.data.toUid
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['opened', 'openedAt', 'seenAt', 'reaction',
+                        'deliveryStatus']);
+        allow delete: if false;
+      }
+
+      // ===== الذكريات =====
+      match /memories/{memoryId} {
+        function isMember() {
+          return isSignedIn()
+            && request.auth.uid in
+                get(/databases/$(database)/documents/couples/$(coupleId))
+                  .data.userIds;
+        }
+        allow read: if isMember();
+        // الإنشاء: عضو، وcreatedBy هو المنفذ نفسه
+        allow create: if isMember()
+          && request.resource.data.createdBy == request.auth.uid;
+        // التحديث (إعجاب/تعليق): أي عضو، بشرط عدم تغيير صاحب الذكرى
+        allow update: if isMember()
+          && request.resource.data.createdBy == resource.data.createdBy;
+        // الحذف: صاحب الذكرى فقط
+        allow delete: if isSignedIn()
+          && request.auth.uid == resource.data.createdBy;
+      }
+
+      // ===== سجل الألعاب =====
+      match /gameHistory/{entryId} {
+        allow read, create: if isSignedIn()
+          && request.auth.uid in
+              get(/databases/$(database)/documents/couples/$(coupleId))
+                .data.userIds;
+        allow update, delete: if false;
+      }
+    }
+
+    // ===== كتالوج الهدايا =====
+    // القراءة لأي مستخدم مسجل، والكتابة من Console/Admin فقط
+    match /giftCatalog/{giftId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // أي مجموعة أخرى: ممنوعة حتى نضيف قواعدها في مرحلتها
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,36 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // صور الذكريات: أطراف العلاقة فقط (قراءة وكتابة)
+    // ملاحظة: تستخدم القواعد عبر الخدمات (Cross-service) لقراءة Firestore
+    match /memories/{coupleId}/{memoryId}/{fileName} {
+      allow read: if request.auth != null
+        && request.auth.uid in
+            firestore.get(/databases/(default)/documents/couples/$(coupleId))
+              .data.userIds;
+      allow write: if request.auth != null
+        && request.auth.uid in
+            firestore.get(/databases/(default)/documents/couples/$(coupleId))
+              .data.userIds
+        // صور فقط وبحد أقصى 5MB
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // صورة الملف الشخصي: صاحبها يكتب، وأي مسجّل يقرأ (ليراها شريكه)
+    match /profiles/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // أي مسار آخر ممنوع
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

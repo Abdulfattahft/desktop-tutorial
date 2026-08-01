@@ -1,0 +1,22 @@
+NEW: web/index.html
+NEW: web/manifest.json
+NEW: web/favicon.png
+NEW: web/icons/Icon-192.png
+NEW: web/icons/Icon-512.png
+NEW: web/firebase-messaging-sw.js.example
+NEW: firebase.json
+NEW: .firebaserc.example
+NEW: lib/core/config/web_firebase_options.dart
+NEW: lib/core/widgets/responsive_page_frame.dart
+NEW: lib/core/presentation/screens/not_found_screen.dart
+NEW: WEB_SETUP.md
+NEW: WEB_CHANGES.md
+NEW: WEB_TESTING.md
+MODIFIED: pubspec.yaml
+MODIFIED: lib/main.dart
+MODIFIED: lib/app.dart
+MODIFIED: lib/core/routing/app_router.dart
+MODIFIED: lib/core/services/push_notification_service.dart
+MODIFIED: memories repository/viewmodel/add screen
+MODIFIED: settings repository/viewmodel/edit profile screen
+MODIFIED: home/games/gifts/AI responsive grids
