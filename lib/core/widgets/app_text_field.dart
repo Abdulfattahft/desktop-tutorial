@@ -25,15 +25,23 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.colorScheme.onSurface;
+    final hintColor = textColor.withOpacity(0.68);
+
     return TextFormField(
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
       validator: validator,
       textInputAction: textInputAction,
+      textAlign: TextAlign.start,
+      style: theme.textTheme.bodyLarge?.copyWith(color: textColor),
+      cursorColor: theme.colorScheme.primary,
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, size: 22),
+        hintStyle: theme.textTheme.bodyMedium?.copyWith(color: hintColor),
+        prefixIcon: Icon(icon, size: 22, color: hintColor),
         suffixIcon: suffixIcon,
       ),
     );
