@@ -35,13 +35,19 @@ import 'features/linking/presentation/viewmodels/linking_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (kIsWeb) usePathUrlStrategy();
+  const enablePathUrls = bool.fromEnvironment(
+    'USE_PATH_URL_STRATEGY',
+    defaultValue: true,
+  );
+  if (kIsWeb && enablePathUrls) usePathUrlStrategy();
 
   // بعد flutterfire configure استبدل السطر التالي بـ:
   // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (kIsWeb) {
     if (!WebFirebaseOptions.isConfigured) {
-      throw StateError('Firebase Web is not configured. See WEB_SETUP.md.');
+      await initializeDateFormatting('ar');
+      runApp(const _FirebaseSetupApp());
+      return;
     }
     await Firebase.initializeApp(options: WebFirebaseOptions.current);
   } else {
@@ -113,4 +119,78 @@ Future<void> main() async {
       child: const BaynanaApp(),
     ),
   );
+}
+
+class _FirebaseSetupApp extends StatelessWidget {
+  const _FirebaseSetupApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'بيننا',
+      locale: const Locale('ar'),
+      home: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          body: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [Color(0xFFFFF5F8), Color(0xFFF5E7EE)],
+              ),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Card(
+                  margin: const EdgeInsets.all(24),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                    side: const BorderSide(color: Color(0xFFE8C5D2)),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('💕', style: TextStyle(fontSize: 56)),
+                        SizedBox(height: 16),
+                        Text(
+                          'بيننا',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF8F3F5C),
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'نسخة الويب جاهزة للنشر، وتحتاج فقط إلى ربط إعدادات Firebase لتفعيل الحسابات والذكريات والألعاب وبقية المزايا.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 17, height: 1.7),
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'أضف قيم Firebase إلى GitHub Secrets ثم أعد تشغيل النشر.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF6B5B62),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
