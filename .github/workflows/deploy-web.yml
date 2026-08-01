@@ -45,6 +45,7 @@ jobs:
         run: |
           flutter build web --release \
             --base-href "/desktop-tutorial/" \
+            --pwa-strategy=none \
             --dart-define=USE_PATH_URL_STRATEGY=false
 
       - name: Add GitHub Pages fallback
