@@ -60,15 +60,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = context.watch<AuthViewModel>().isLoading;
+    final media = MediaQuery.of(context);
+    final compact = media.size.width < 420;
+    final horizontal = compact ? 16.0 : 24.0;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(title: const Text('حساب جديد')),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                horizontal,
+                compact ? 8 : 16,
+                horizontal,
+                media.viewInsets.bottom + 24,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -85,14 +95,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ).animate().fadeIn(delay: 100.ms),
-                    const SizedBox(height: 28),
+                    SizedBox(height: compact ? 20 : 28),
                     AppTextField(
                       controller: _nameCtrl,
                       hint: 'الاسم',
                       icon: Icons.person_outline_rounded,
                       validator: Validators.name,
                     ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.2),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     AppTextField(
                       controller: _emailCtrl,
                       hint: 'البريد الإلكتروني',
@@ -100,7 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                       validator: Validators.email,
                     ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.2),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     AppTextField(
                       controller: _passwordCtrl,
                       hint: 'كلمة المرور',
@@ -116,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.2),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     AppTextField(
                       controller: _confirmCtrl,
                       hint: 'تأكيد كلمة المرور',
@@ -127,7 +137,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ? 'كلمتا المرور غير متطابقتين'
                           : null,
                     ).animate().fadeIn(delay: 450.ms).slideY(begin: 0.2),
-                    const SizedBox(height: 28),
+                    SizedBox(height: compact ? 20 : 28),
                     ElevatedButton(
                       onPressed: isLoading ? null : _submit,
                       child: isLoading
@@ -141,7 +151,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             )
                           : const Text('إنشاء الحساب'),
                     ).animate().fadeIn(delay: 550.ms),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Wrap(
                       alignment: WrapAlignment.center,
                       crossAxisAlignment: WrapCrossAlignment.center,
