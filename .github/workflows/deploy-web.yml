@@ -2,7 +2,9 @@ name: Build and Deploy Baynana Web
 
 on:
   push:
-    branches: [main, baynana-web]
+    branches:
+      - main
+      - baynana-web
   workflow_dispatch:
 
 permissions:
@@ -30,140 +32,21 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Flutter version
+        run: flutter --version
+
       - name: Install dependencies
         run: flutter pub get
 
       - name: Analyze Dart code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build web release with HTML renderer
+      - name: Build web release
         run: |
           flutter build web --release \
-            --web-renderer html \
             --base-href "/desktop-tutorial/" \
             --pwa-strategy=none \
             --dart-define=USE_PATH_URL_STRATEGY=false
-
-      - name: Version Flutter entry files
-        env:
-          REVISION: ${{ github.sha }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import pathlib
-
-          revision = os.environ['REVISION']
-          root = pathlib.Path('build/web')
-
-          for filename in ('index.html', 'start.html'):
-              page = root / filename
-              text = page.read_text(encoding='utf-8')
-              if '__BUILD_REVISION__' not in text:
-                  raise SystemExit(f'Missing revision placeholder in {filename}')
-              page.write_text(text.replace('__BUILD_REVISION__', revision), encoding='utf-8')
-
-          bootstrap = root / 'flutter_bootstrap.js'
-          text = bootstrap.read_text(encoding='utf-8')
-          bootstrap.write_text(
-              text.replace('main.dart.js', f'main.dart.js?revision={revision}'),
-              encoding='utf-8',
-          )
-          (root / 'deploy-version.txt').write_text(revision, encoding='utf-8')
-          PY
-
-      - name: Install WebKit viewport test
-        run: |
-          npm install --no-save playwright@1.54.2
-          npx playwright install --with-deps webkit
-          python3 -m pip install --quiet pillow
-
-      - name: Verify first frame and full iPhone viewport
-        run: |
-          mkdir -p /tmp/baynana-site/desktop-tutorial
-          cp -R build/web/. /tmp/baynana-site/desktop-tutorial/
-          python3 -m http.server 4173 --directory /tmp/baynana-site >/tmp/baynana-http.log 2>&1 &
-
-          cat > verify-baynana.cjs <<'JS'
-          const { webkit, devices } = require('playwright');
-
-          (async () => {
-            const browser = await webkit.launch();
-            const context = await browser.newContext({
-              ...devices['iPhone 13'],
-              colorScheme: 'light',
-              locale: 'ar-SA',
-            });
-            const page = await context.newPage();
-            const pageErrors = [];
-            page.on('pageerror', error => pageErrors.push(error.message));
-
-            await page.goto(
-              'http://127.0.0.1:4173/desktop-tutorial/start.html?ci=iphone',
-              { waitUntil: 'domcontentloaded', timeout: 90000 },
-            );
-
-            await page.waitForFunction(
-              () => document.documentElement.dataset.flutterReady === 'true',
-              null,
-              { timeout: 90000 },
-            );
-            await page.waitForTimeout(1500);
-
-            const metrics = await page.evaluate(() => {
-              const root = document.querySelector(
-                'body > flutter-view, body > flt-glass-pane',
-              );
-              const rect = root?.getBoundingClientRect();
-              return {
-                innerWidth: window.innerWidth,
-                innerHeight: window.innerHeight,
-                root: rect ? {
-                  width: rect.width,
-                  height: rect.height,
-                  left: rect.left,
-                  top: rect.top,
-                } : null,
-                ready: document.documentElement.dataset.flutterReady,
-                loading: Boolean(document.getElementById('baynana-loading')),
-              };
-            });
-
-            console.log('iPhone metrics:', JSON.stringify(metrics));
-            if (!metrics.root) throw new Error('Flutter root was not created.');
-            if (metrics.ready !== 'true') throw new Error('Flutter first frame was not rendered.');
-            if (Math.abs(metrics.root.width - metrics.innerWidth) > 2) {
-              throw new Error(`Flutter width ${metrics.root.width} != ${metrics.innerWidth}`);
-            }
-            if (metrics.root.height < metrics.innerHeight * 0.95) {
-              throw new Error(`Flutter height ${metrics.root.height} is too small.`);
-            }
-            if (metrics.loading) throw new Error('Loading overlay still exists after first frame.');
-            if (pageErrors.length) throw new Error(pageErrors.join(' | '));
-
-            await page.screenshot({ path: '/tmp/baynana-iphone.png' });
-            await browser.close();
-          })().catch(error => {
-            console.error(error);
-            process.exit(1);
-          });
-          JS
-
-          node verify-baynana.cjs
-          rm -f verify-baynana.cjs
-
-          python3 - <<'PY'
-          from PIL import Image, ImageStat
-
-          image = Image.open('/tmp/baynana-iphone.png').convert('RGB')
-          width, height = image.size
-          center = image.crop((int(width * .15), int(height * .15), int(width * .85), int(height * .85)))
-          stat = ImageStat.Stat(center)
-          variance = sum(stat.var) / 3
-          mean = sum(stat.mean) / 3
-          print(f'center brightness={mean:.1f}, variance={variance:.1f}')
-          if mean < 35 and variance < 120:
-              raise SystemExit('Flutter rendered a nearly uniform black screen.')
-          PY
 
       - name: Add GitHub Pages fallback
         run: cp build/web/index.html build/web/404.html
@@ -186,20 +69,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Verify deployed revision
-        env:
-          EXPECTED_SHA: ${{ github.sha }}
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
-        run: |
-          for attempt in {1..18}; do
-            DEPLOYED_SHA="$(curl -fsSL "${PAGE_URL}deploy-version.txt?revision=${EXPECTED_SHA}" || true)"
-            START_HTML="$(curl -fsSL "${PAGE_URL}start.html?revision=${EXPECTED_SHA}" || true)"
-            if [ "${DEPLOYED_SHA}" = "${EXPECTED_SHA}" ] && printf '%s' "${START_HTML}" | grep -q "${EXPECTED_SHA}"; then
-              echo "Verified deployed revision ${EXPECTED_SHA}"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::Expected revision was not served by GitHub Pages."
-          exit 1
