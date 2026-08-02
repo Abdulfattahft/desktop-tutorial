@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/routing/app_router.dart';
+import '../../../../core/services/web_ready_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../viewmodels/auth_viewmodel.dart';
@@ -20,6 +20,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _obscure = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) markWebAppReady(screen: 'login');
+    });
+  }
 
   @override
   void dispose() {
@@ -62,6 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final logoSize = compact ? 68.0 : 84.0;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Center(
@@ -94,22 +103,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           size: compact ? 32 : 40,
                         ),
                       ),
-                    ).animate().scale(
-                          duration: 500.ms,
-                          curve: Curves.easeOutBack,
-                        ),
+                    ),
                     SizedBox(height: compact ? 14 : 20),
                     Text(
                       'أهلًا بعودتك 💕',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium,
-                    ).animate().fadeIn(delay: 150.ms),
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'سجّل دخولك وكمّل رحلتكما',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
-                    ).animate().fadeIn(delay: 250.ms),
+                    ),
                     SizedBox(height: compact ? 24 : 36),
                     AppTextField(
                       controller: _emailCtrl,
@@ -117,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: Validators.email,
-                    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+                    ),
                     const SizedBox(height: 14),
                     AppTextField(
                       controller: _passwordCtrl,
@@ -134,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
-                    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+                    ),
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: TextButton(
@@ -158,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             )
                           : const Text('تسجيل الدخول'),
-                    ).animate().fadeIn(delay: 500.ms),
+                    ),
                     const SizedBox(height: 14),
                     Wrap(
                       alignment: WrapAlignment.center,
@@ -179,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(delay: 600.ms),
+                    ),
                   ],
                 ),
               ),
