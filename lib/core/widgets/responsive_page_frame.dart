@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Keeps mobile screens comfortable while preventing content from stretching
-/// excessively on tablets, laptops and wide desktop displays.
+/// إطار عام للتطبيق.
+///
+/// يجب أن يملأ Flutter مساحة المتصفح كاملة دائمًا. تقييد العرض هنا كان يجعل
+/// Safari على iPhone وiPad يعرض التطبيق في جزء من الشاشة عندما يبلّغ Flutter
+/// بقياس تخطيط أكبر من قياس الجهاز. ضبط العرض الأقصى يتم داخل كل صفحة عند
+/// الحاجة، مثل صفحات تسجيل الدخول والتسجيل، وليس على جذر التطبيق كله.
 class ResponsivePageFrame extends StatelessWidget {
   const ResponsivePageFrame({required this.child, super.key});
 
@@ -9,24 +13,9 @@ class ResponsivePageFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final maxWidth = width >= 1440
-            ? 1280.0
-            : width >= 1024
-                ? 1120.0
-                : width >= 720
-                    ? 760.0
-                    : width;
-        return ColoredBox(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: SizedBox(width: maxWidth, child: child),
-          ),
-        );
-      },
+    return ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: SizedBox.expand(child: child),
     );
   }
 }
