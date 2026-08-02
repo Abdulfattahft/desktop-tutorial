@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'core/widgets/responsive_page_frame.dart';
 import 'features/settings/presentation/viewmodels/settings_viewmodel.dart';
 
 class BaynanaApp extends StatelessWidget {
@@ -36,7 +35,7 @@ class BaynanaApp extends StatelessWidget {
 
         return MediaQuery(
           data: media.copyWith(textScaler: TextScaler.linear(safeScale)),
-          child: ResponsivePageFrame(
+          child: SizedBox.expand(
             child: child ?? const SizedBox.shrink(),
           ),
         );
