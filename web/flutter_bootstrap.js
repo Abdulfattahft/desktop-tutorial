@@ -36,7 +36,6 @@ function showStartupError(error) {
 
 function handleBrowserError(error) {
   if (baynanaFlutterStarted) {
-    // لا نهدم واجهة Flutter بسبب خطأ متأخر وغير قاتل من المتصفح أو إضافة ويب.
     console.error('Baynana runtime error after Flutter startup:', error);
     return;
   }
@@ -63,10 +62,25 @@ window.addEventListener('unhandledrejection', (event) => {
       await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
     }
 
-    baynanaStartupStage = 'تحميل محرك Flutter وتشغيل التطبيق';
-    await _flutter.loader.load();
-    baynanaStartupStage = 'اكتمل تشغيل Flutter';
-    baynanaFlutterStarted = true;
+    baynanaStartupStage = 'تحميل نقطة تشغيل Flutter';
+    _flutter.loader.load({
+      serviceWorkerSettings: null,
+      onEntrypointLoaded: async function (engineInitializer) {
+        try {
+          baynanaStartupStage = 'تهيئة محرك Flutter';
+          const appRunner = await engineInitializer.initializeEngine();
+
+          baynanaStartupStage = 'تشغيل واجهة التطبيق';
+          await appRunner.runApp();
+
+          baynanaStartupStage = 'اكتمل تشغيل Flutter';
+          baynanaFlutterStarted = true;
+          document.documentElement.dataset.baynanaReady = 'true';
+        } catch (error) {
+          showStartupError(error);
+        }
+      },
+    });
   } catch (error) {
     showStartupError(error);
   }
