@@ -99,7 +99,7 @@ jobs:
           cp -R build/web/. /tmp/baynana-site/desktop-tutorial/
           python3 -m http.server 4173 --directory /tmp/baynana-site >/tmp/baynana-http.log 2>&1 &
 
-          cat > /tmp/verify-baynana.cjs <<'JS'
+          cat > verify-baynana.cjs <<'JS'
           const { webkit, devices } = require('playwright');
 
           (async () => {
@@ -184,7 +184,8 @@ jobs:
           });
           JS
 
-          node /tmp/verify-baynana.cjs
+          node verify-baynana.cjs
+          rm -f verify-baynana.cjs
 
           python3 - <<'PY'
           from PIL import Image, ImageStat
