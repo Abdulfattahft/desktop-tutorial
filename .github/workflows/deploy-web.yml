@@ -28,7 +28,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.44.0'
           channel: stable
           cache: true
 
@@ -45,7 +45,6 @@ jobs:
       - name: Build web release
         run: |
           flutter build web --release \
-            --web-renderer html \
             --base-href "/desktop-tutorial/" \
             --pwa-strategy=none \
             --dart-define=USE_PATH_URL_STRATEGY=false
