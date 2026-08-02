@@ -39,12 +39,13 @@
     }
 
     .baynana-loading-card {
+      max-width: 320px;
       padding: 24px;
       font-size: 18px;
       font-weight: 700;
+      line-height: 1.8;
     }
 
-    /* Only size the Flutter root. Internal canvases keep Flutter's own layout. */
     body > flutter-view,
     body > flt-glass-pane {
       position: fixed !important;
@@ -62,7 +63,7 @@
 </head>
 <body>
   <div id="baynana-loading">
-    <div class="baynana-loading-card">جاري تشغيل بيننا…</div>
+    <div class="baynana-loading-card" id="baynana-loading-text">جاري تشغيل بيننا…</div>
   </div>
 
   <script>
@@ -73,9 +74,7 @@
       try {
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(
-            registrations.map((registration) => registration.unregister()),
-          );
+          await Promise.all(registrations.map((registration) => registration.unregister()));
         }
 
         if ('caches' in window) {
@@ -90,34 +89,29 @@
       bootstrap.src = `flutter_bootstrap.js?revision=${encodeURIComponent(baynanaRevision)}`;
       bootstrap.async = true;
       bootstrap.onerror = () => {
-        const loading = document.getElementById('baynana-loading');
-        if (loading) loading.textContent = 'تعذر تحميل التطبيق. أعد فتح الرابط.';
+        const text = document.getElementById('baynana-loading-text');
+        if (text) text.textContent = 'تعذر تحميل ملفات التطبيق. أعد فتح الرابط.';
       };
       document.body.appendChild(bootstrap);
 
-      const hideLoadingWhenFlutterAppears = () => {
-        const flutterSurface = document.querySelector(
-          'body > flutter-view, body > flt-glass-pane',
-        );
-        if (!flutterSurface) return false;
+      const loading = document.getElementById('baynana-loading');
+      const text = document.getElementById('baynana-loading-text');
+      const startedAt = Date.now();
 
-        const loading = document.getElementById('baynana-loading');
-        if (loading) {
-          loading.classList.add('hidden');
-          setTimeout(() => loading.remove(), 250);
+      const timer = window.setInterval(() => {
+        if (document.documentElement.dataset.flutterReady === 'true') {
+          window.clearInterval(timer);
+          if (loading) {
+            loading.classList.add('hidden');
+            window.setTimeout(() => loading.remove(), 250);
+          }
+          return;
         }
-        return true;
-      };
 
-      if (!hideLoadingWhenFlutterAppears()) {
-        const observer = new MutationObserver(() => {
-          if (hideLoadingWhenFlutterAppears()) observer.disconnect();
-        });
-        observer.observe(document.body, {
-          childList: true,
-          subtree: false,
-        });
-      }
+        if (Date.now() - startedAt > 35000 && text) {
+          text.textContent = 'استغرق تشغيل التطبيق وقتًا أطول من المتوقع. تحقق من الاتصال ثم أعد تحميل الصفحة.';
+        }
+      }, 100);
     })();
   </script>
 </body>
