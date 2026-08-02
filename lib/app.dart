@@ -15,16 +15,18 @@ class BaynanaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final savedThemeMode = context.watch<SettingsViewModel>().themeMode;
+    // لا ننشئ SettingsViewModel في أول إطار على الويب؛ قراءة التخزين المحلي
+    // في بداية Safari كانت إحدى نقاط التعليق المحتملة. الوضع الفاتح ثابت مؤقتًا.
+    final themeMode = kIsWeb
+        ? ThemeMode.light
+        : context.watch<SettingsViewModel>().themeMode;
 
     return MaterialApp.router(
       title: 'بيننا',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      // نثبت الوضع الفاتح مؤقتًا على الويب حتى لا تختلط شاشة فارغة
-      // بخلفية الوضع الليلي أثناء تهيئة Router على Safari.
-      themeMode: kIsWeb ? ThemeMode.light : savedThemeMode,
+      themeMode: themeMode,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar'), Locale('en')],
       localizationsDelegates: const [
