@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -58,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final isLoading = context.watch<AuthViewModel>().isLoading;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -83,22 +83,19 @@ class _LoginScreenState extends State<LoginScreen> {
                           size: 40,
                         ),
                       ),
-                    ).animate().scale(
-                          duration: 500.ms,
-                          curve: Curves.easeOutBack,
-                        ),
+                    ),
                     const SizedBox(height: 20),
                     Text(
                       'أهلًا بعودتك 💕',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineMedium,
-                    ).animate().fadeIn(delay: 150.ms),
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'سجّل دخولك وكمّل رحلتكما',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
-                    ).animate().fadeIn(delay: 250.ms),
+                    ),
                     const SizedBox(height: 36),
                     AppTextField(
                       controller: _emailCtrl,
@@ -106,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: Validators.email,
-                    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+                    ),
                     const SizedBox(height: 16),
                     AppTextField(
                       controller: _passwordCtrl,
@@ -123,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
-                    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+                    ),
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: TextButton(
@@ -147,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             )
                           : const Text('تسجيل الدخول'),
-                    ).animate().fadeIn(delay: 500.ms),
+                    ),
                     const SizedBox(height: 20),
                     Wrap(
                       alignment: WrapAlignment.center,
@@ -168,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ],
-                    ).animate().fadeIn(delay: 600.ms),
+                    ),
                   ],
                 ),
               ),
