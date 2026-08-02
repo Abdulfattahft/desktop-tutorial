@@ -29,6 +29,7 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../presentation/screens/not_found_screen.dart';
 
+/// أسماء المسارات
 class AppRoutes {
   AppRoutes._();
 
@@ -58,6 +59,7 @@ class AppRoutes {
   static const String notificationSettings = '/notifications/settings';
 }
 
+/// إعداد التوجيه
 class AppRouter {
   AppRouter._();
 
@@ -76,23 +78,41 @@ class AppRouter {
         AppRoutes.forgotPassword,
       };
       if (!signedIn && !publicRoutes.contains(location)) return AppRoutes.login;
-      if (signedIn &&
-          (location == AppRoutes.login || location == AppRoutes.register)) {
+      if (signedIn && (location == AppRoutes.login || location == AppRoutes.register)) {
         return AppRoutes.home;
       }
       return null;
     },
     routes: [
-      GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
-      GoRoute(path: AppRoutes.onboarding, builder: (_, __) => const OnboardingScreen()),
-      GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
-      GoRoute(path: AppRoutes.register, builder: (_, __) => const RegisterScreen()),
-      GoRoute(path: AppRoutes.forgotPassword, builder: (_, __) => const ForgotPasswordScreen()),
-      GoRoute(path: AppRoutes.linkPartner, builder: (_, __) => const LinkPartnerScreen()),
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.register,
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.linkPartner,
+        builder: (context, state) => const LinkPartnerScreen(),
+      ),
       GoRoute(
         path: AppRoutes.games,
-        builder: (_, __) => const GamesHubScreen(),
+        builder: (context, state) => const GamesHubScreen(),
         routes: [
+          // /games/:type — شاشة اللعب
           GoRoute(
             path: ':type',
             builder: (context, state) {
@@ -104,26 +124,71 @@ class AppRouter {
           ),
         ],
       ),
-      GoRoute(path: AppRoutes.challenges, builder: (_, __) => const ChallengesScreen()),
-      GoRoute(path: AppRoutes.gifts, builder: (_, __) => const GiftsScreen()),
-      GoRoute(path: AppRoutes.settings, builder: (_, __) => const SettingsScreen()),
-      GoRoute(path: AppRoutes.editProfile, builder: (_, __) => const EditProfileScreen()),
-      GoRoute(path: AppRoutes.relationship, builder: (_, __) => const RelationshipScreen()),
-      GoRoute(path: AppRoutes.deleteAccount, builder: (_, __) => const DeleteAccountScreen()),
-      GoRoute(path: AppRoutes.privacyPolicy, builder: (_, __) => const LegalScreen(isPrivacy: true)),
-      GoRoute(path: AppRoutes.terms, builder: (_, __) => const LegalScreen(isPrivacy: false)),
-      GoRoute(path: AppRoutes.ai, builder: (_, __) => const AIAssistantScreen()),
-      GoRoute(path: AppRoutes.aiSettings, builder: (_, __) => const AISettingsScreen()),
-      GoRoute(path: AppRoutes.notifications, builder: (_, __) => const NotificationsScreen()),
-      GoRoute(path: AppRoutes.notificationSettings, builder: (_, __) => const NotificationSettingsScreen()),
-      GoRoute(path: AppRoutes.memories, builder: (_, __) => const MemoriesScreen()),
-      GoRoute(path: AppRoutes.memoriesAdd, builder: (_, __) => const AddMemoryScreen()),
+      GoRoute(
+        path: AppRoutes.challenges,
+        builder: (context, state) => const ChallengesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.gifts,
+        builder: (context, state) => const GiftsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settings,
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.editProfile,
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.relationship,
+        builder: (context, state) => const RelationshipScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.deleteAccount,
+        builder: (context, state) => const DeleteAccountScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.privacyPolicy,
+        builder: (context, state) => const LegalScreen(isPrivacy: true),
+      ),
+      GoRoute(
+        path: AppRoutes.terms,
+        builder: (context, state) => const LegalScreen(isPrivacy: false),
+      ),
+      GoRoute(
+        path: AppRoutes.ai,
+        builder: (context, state) => const AIAssistantScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.aiSettings,
+        builder: (context, state) => const AISettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.notificationSettings,
+        builder: (context, state) => const NotificationSettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.memories,
+        builder: (context, state) => const MemoriesScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.memoriesAdd,
+        builder: (context, state) => const AddMemoryScreen(),
+      ),
       GoRoute(
         path: AppRoutes.memoryDetail,
         builder: (context, state) =>
             MemoryDetailScreen(initial: state.extra as MemoryModel),
       ),
-      GoRoute(path: AppRoutes.home, builder: (_, __) => const HomeScreen()),
+      GoRoute(
+        path: AppRoutes.home,
+        builder: (context, state) => const HomeScreen(),
+      ),
     ],
   );
 }
