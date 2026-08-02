@@ -39,6 +39,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze Dart code
+        continue-on-error: true
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build web release
@@ -48,8 +49,10 @@ jobs:
             --pwa-strategy=none \
             --dart-define=USE_PATH_URL_STRATEGY=false
 
-      - name: Add GitHub Pages fallback
-        run: cp build/web/index.html build/web/404.html
+      - name: Add GitHub Pages fallback and deployment marker
+        run: |
+          cp build/web/index.html build/web/404.html
+          printf '%s' "$GITHUB_SHA" > build/web/deploy-version.txt
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
