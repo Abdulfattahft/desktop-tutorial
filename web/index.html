@@ -18,6 +18,53 @@
 </head>
 <body>
   <noscript>يحتاج موقع بيننا إلى تفعيل JavaScript.</noscript>
-  <script src="flutter_bootstrap.js" async></script>
+
+  <script>
+    // Each deployment replaces this placeholder with its Git commit SHA.
+    // The revision is also appended to Flutter entry files so Safari cannot
+    // reuse a JavaScript bundle from an older layout.
+    const baynanaRevision = '__BUILD_REVISION__';
+    document.documentElement.dataset.baynanaRevision = baynanaRevision;
+
+    (async () => {
+      const resetKey = `baynana-cache-reset-${baynanaRevision}`;
+
+      try {
+        if (!sessionStorage.getItem(resetKey)) {
+          const wasControlled = Boolean(
+            'serviceWorker' in navigator && navigator.serviceWorker.controller,
+          );
+
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((registration) => registration.unregister()));
+          }
+
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+          }
+
+          sessionStorage.setItem(resetKey, 'true');
+
+          // A page already controlled by the old Flutter service worker must
+          // navigate once after unregistering before loading the new bundle.
+          if (wasControlled) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('revision', baynanaRevision);
+            window.location.replace(url.toString());
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('Baynana cache cleanup skipped:', error);
+      }
+
+      const bootstrap = document.createElement('script');
+      bootstrap.src = `flutter_bootstrap.js?revision=${encodeURIComponent(baynanaRevision)}`;
+      bootstrap.async = true;
+      document.body.appendChild(bootstrap);
+    })();
+  </script>
 </body>
 </html>
