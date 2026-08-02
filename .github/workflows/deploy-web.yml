@@ -39,7 +39,6 @@ jobs:
         run: flutter pub get
 
       - name: Analyze Dart code
-        continue-on-error: true
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build web release
@@ -47,6 +46,7 @@ jobs:
           flutter build web --release \
             --base-href "/desktop-tutorial/" \
             --pwa-strategy=none \
+            --no-wasm-dry-run \
             --dart-define=USE_PATH_URL_STRATEGY=false
 
       - name: Add GitHub Pages fallback and deployment marker
@@ -72,3 +72,22 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify deployed revision
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          VERSION_URL: ${{ steps.deployment.outputs.page_url }}deploy-version.txt
+        run: |
+          echo "Waiting for GitHub Pages to serve ${EXPECTED_SHA}"
+          for attempt in {1..18}; do
+            DEPLOYED_SHA="$(curl -fsSL "${VERSION_URL}?revision=${EXPECTED_SHA}" || true)"
+            if [ "${DEPLOYED_SHA}" = "${EXPECTED_SHA}" ]; then
+              echo "Verified deployed revision: ${DEPLOYED_SHA}"
+              exit 0
+            fi
+            echo "Attempt ${attempt}/18: deployed='${DEPLOYED_SHA:-unavailable}'"
+            sleep 10
+          done
+
+          echo "::error::GitHub Pages did not serve the expected revision ${EXPECTED_SHA}."
+          exit 1
