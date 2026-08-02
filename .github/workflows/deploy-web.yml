@@ -59,14 +59,17 @@ jobs:
           revision = os.environ['REVISION']
           root = pathlib.Path('build/web')
 
-          index = root / 'index.html'
-          index_text = index.read_text(encoding='utf-8')
-          if '__BUILD_REVISION__' not in index_text:
-              raise SystemExit('Missing __BUILD_REVISION__ placeholder in index.html')
-          index.write_text(
-              index_text.replace('__BUILD_REVISION__', revision),
-              encoding='utf-8',
-          )
+          for filename in ('index.html', 'start.html'):
+              page = root / filename
+              text = page.read_text(encoding='utf-8')
+              if '__BUILD_REVISION__' not in text:
+                  raise SystemExit(
+                      f'Missing __BUILD_REVISION__ placeholder in {filename}'
+                  )
+              page.write_text(
+                  text.replace('__BUILD_REVISION__', revision),
+                  encoding='utf-8',
+              )
 
           bootstrap = root / 'flutter_bootstrap.js'
           bootstrap_text = bootstrap.read_text(encoding='utf-8')
@@ -105,21 +108,28 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify deployed revision
+      - name: Verify deployed revision and launch page
         env:
           EXPECTED_SHA: ${{ github.sha }}
-          VERSION_URL: ${{ steps.deployment.outputs.page_url }}deploy-version.txt
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
+          VERSION_URL="${PAGE_URL}deploy-version.txt"
+          START_URL="${PAGE_URL}start.html"
+
           echo "Waiting for GitHub Pages to serve ${EXPECTED_SHA}"
           for attempt in {1..18}; do
             DEPLOYED_SHA="$(curl -fsSL "${VERSION_URL}?revision=${EXPECTED_SHA}" || true)"
-            if [ "${DEPLOYED_SHA}" = "${EXPECTED_SHA}" ]; then
-              echo "Verified deployed revision: ${DEPLOYED_SHA}"
+            START_HTML="$(curl -fsSL "${START_URL}?revision=${EXPECTED_SHA}" || true)"
+
+            if [ "${DEPLOYED_SHA}" = "${EXPECTED_SHA}" ] \
+              && printf '%s' "${START_HTML}" | grep -q "${EXPECTED_SHA}"; then
+              echo "Verified deployed revision and cache-proof launch page."
               exit 0
             fi
+
             echo "Attempt ${attempt}/18: deployed='${DEPLOYED_SHA:-unavailable}'"
             sleep 10
           done
 
-          echo "::error::GitHub Pages did not serve the expected revision ${EXPECTED_SHA}."
+          echo "::error::GitHub Pages did not serve the expected launch revision ${EXPECTED_SHA}."
           exit 1
