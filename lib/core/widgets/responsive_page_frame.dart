@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// إطار عام يضمن أن كل شاشة تأخذ كامل ارتفاع المتصفح، مع إبقاء المحتوى
-/// مريحًا على الجوال وعدم تمدده بشكل مبالغ فيه على الشاشات الواسعة.
+/// إطار عام يضمن أن التطبيق يملأ كامل مساحة المتصفح دائمًا.
+/// تقييد عرض المحتوى يتم داخل كل شاشة، وليس على جذر التطبيق؛ لأن Safari
+/// قد يبلّغ Flutter بعرض سطح مكتب حتى على الجوال في بعض الحالات.
 class ResponsivePageFrame extends StatelessWidget {
   const ResponsivePageFrame({required this.child, super.key});
 
   final Widget child;
-
-  static double contentMaxWidth(double width) {
-    if (width >= 1600) return 1320;
-    if (width >= 1200) return 1180;
-    if (width >= 900) return 960;
-    if (width >= 600) return 760;
-    return width;
-  }
 
   static double pagePadding(double width) {
     if (width < 360) return 12;
@@ -24,24 +17,11 @@ class ResponsivePageFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final height = constraints.maxHeight;
-        final maxWidth = contentMaxWidth(width);
-
-        return ColoredBox(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: SizedBox(
-              width: maxWidth,
-              height: height,
-              child: ClipRect(child: child),
-            ),
-          ),
-        );
-      },
+    return SizedBox.expand(
+      child: ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: ClipRect(child: child),
+      ),
     );
   }
 }
