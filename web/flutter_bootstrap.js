@@ -2,6 +2,7 @@
 {{flutter_build_config}}
 
 let baynanaStartupStage = 'تهيئة صفحة الويب';
+let baynanaFlutterStarted = false;
 
 function escapeHtml(value) {
   return String(value)
@@ -10,16 +11,19 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;');
 }
 
-function showStartupError(error) {
+function errorDetails(error) {
   const name = error instanceof Error ? error.name : 'Error';
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error && error.stack ? error.stack : '';
-  const details = [
+  return [
     `${name}: ${message}`,
     `المرحلة: ${baynanaStartupStage}`,
     stack,
   ].filter(Boolean).join('\n\n');
+}
 
+function showStartupError(error) {
+  const details = errorDetails(error);
   document.body.innerHTML = `
     <main dir="rtl" style="min-height:100vh;background:#1e1a19;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Arial,sans-serif">
       <section style="width:min(620px,100%);background:#2a2422;border:1px solid #6b4a4a;border-radius:20px;padding:24px">
@@ -30,11 +34,20 @@ function showStartupError(error) {
     </main>`;
 }
 
+function handleBrowserError(error) {
+  if (baynanaFlutterStarted) {
+    // لا نهدم واجهة Flutter بسبب خطأ متأخر وغير قاتل من المتصفح أو إضافة ويب.
+    console.error('Baynana runtime error after Flutter startup:', error);
+    return;
+  }
+  showStartupError(error);
+}
+
 window.addEventListener('error', (event) => {
-  showStartupError(event.error || event.message);
+  handleBrowserError(event.error || event.message);
 });
 window.addEventListener('unhandledrejection', (event) => {
-  showStartupError(event.reason);
+  handleBrowserError(event.reason);
 });
 
 (async function () {
@@ -53,6 +66,7 @@ window.addEventListener('unhandledrejection', (event) => {
     baynanaStartupStage = 'تحميل محرك Flutter وتشغيل التطبيق';
     await _flutter.loader.load();
     baynanaStartupStage = 'اكتمل تشغيل Flutter';
+    baynanaFlutterStarted = true;
   } catch (error) {
     showStartupError(error);
   }
