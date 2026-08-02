@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
 
 concurrency:
   group: baynana-web-pages
@@ -84,7 +85,7 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.50.1
           npx playwright install --with-deps webkit
 
-      - name: iPhone WebKit startup and viewport smoke test
+      - name: Verify real login screen in iPhone WebKit
         run: |
           mkdir -p .smoke/desktop-tutorial
           cp -R build/web/. .smoke/desktop-tutorial/
@@ -101,54 +102,88 @@ jobs:
           done
 
           node <<'NODE'
+          const fs = require('fs');
           const { webkit, devices } = require('playwright');
 
           (async () => {
-            const errors = [];
+            const pageErrors = [];
+            const consoleErrors = [];
             const browser = await webkit.launch({ headless: true });
             const context = await browser.newContext({
               ...devices['iPhone 15 Pro'],
               locale: 'ar-SA',
-              colorScheme: 'dark',
+              colorScheme: 'light',
             });
             const page = await context.newPage();
 
             page.on('pageerror', (error) => {
-              errors.push(error.stack || error.message || String(error));
+              pageErrors.push(error.stack || error.message || String(error));
+            });
+            page.on('console', (message) => {
+              if (message.type() === 'error') consoleErrors.push(message.text());
             });
 
-            await page.goto('http://127.0.0.1:4173/desktop-tutorial/', {
-              waitUntil: 'domcontentloaded',
-              timeout: 60000,
-            });
+            let navigationError = null;
+            try {
+              await page.goto('http://127.0.0.1:4173/desktop-tutorial/', {
+                waitUntil: 'domcontentloaded',
+                timeout: 60000,
+              });
+              await page.waitForFunction(
+                () => document.documentElement.dataset.baynanaScreen === 'login',
+                null,
+                { timeout: 60000 },
+              );
+            } catch (error) {
+              navigationError = error.stack || error.message || String(error);
+            }
 
-            await page.waitForFunction(
-              () => document.documentElement.dataset.baynanaReady === 'true',
-              null,
-              { timeout: 60000 },
-            );
+            await page.waitForTimeout(2000);
+
+            const state = await page.evaluate(() => ({
+              ready: document.documentElement.dataset.baynanaReady || null,
+              screen: document.documentElement.dataset.baynanaScreen || null,
+              loadingVisible: Boolean(document.getElementById('baynana-loading')),
+              bodyText: document.body.innerText.slice(0, 3000),
+              bodyHtml: document.body.innerHTML.slice(0, 5000),
+            }));
 
             const surface = page.locator('flutter-view, flt-glass-pane').first();
-            await surface.waitFor({ state: 'attached', timeout: 60000 });
-            await page.waitForTimeout(5000);
-
-            const bodyText = await page.locator('body').innerText();
-            const startupScreen = bodyText.includes('تعذر تشغيل تطبيق بيننا');
-            const box = await surface.boundingBox();
+            const surfaceCount = await surface.count();
+            const box = surfaceCount ? await surface.boundingBox() : null;
             const viewport = page.viewportSize();
-            const widthOk = Boolean(
-              box && viewport && box.width >= viewport.width * 0.95
-            );
-            const heightOk = Boolean(
-              box && viewport && box.height >= viewport.height * 0.90
-            );
-            const ready = await page.evaluate(
-              () => document.documentElement.dataset.baynanaReady === 'true',
+            const widthOk = Boolean(box && viewport && box.width >= viewport.width * 0.95);
+            const heightOk = Boolean(box && viewport && box.height >= viewport.height * 0.90);
+            const passed =
+              !navigationError &&
+              state.ready === 'true' &&
+              state.screen === 'login' &&
+              !state.loadingVisible &&
+              pageErrors.length === 0 &&
+              widthOk &&
+              heightOk;
+
+            const diagnostic = {
+              commit: process.env.GITHUB_SHA,
+              passed,
+              navigationError,
+              state,
+              pageErrors,
+              consoleErrors,
+              box,
+              viewport,
+              widthOk,
+              heightOk,
+            };
+
+            fs.writeFileSync(
+              '/tmp/baynana-diagnostic.txt',
+              '```json\n' + JSON.stringify(diagnostic, null, 2) + '\n```\n',
             );
 
-            if (startupScreen || errors.length > 0 || !ready || !widthOk || !heightOk) {
-              console.error('Baynana iPhone WebKit smoke test failed.');
-              console.error({ bodyText, errors, ready, box, viewport, widthOk, heightOk });
+            if (!passed) {
+              console.error('Baynana real-screen verification failed.');
+              console.error(JSON.stringify(diagnostic, null, 2));
               await page.screenshot({
                 path: 'baynana-webkit-startup-error.png',
                 fullPage: true,
@@ -157,13 +192,41 @@ jobs:
               process.exit(1);
             }
 
-            console.log('Baynana runApp completed and opened full-width in iPhone WebKit.');
+            console.log('Verified the real Baynana login screen in iPhone WebKit.');
             await browser.close();
           })().catch((error) => {
+            fs.writeFileSync(
+              '/tmp/baynana-diagnostic.txt',
+              'Unexpected smoke-test failure:\n\n```\n' +
+                (error.stack || String(error)) +
+                '\n```\n',
+            );
             console.error(error.stack || error);
             process.exit(1);
           });
           NODE
+
+      - name: Upload failed startup screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baynana-web-startup-diagnostic-${{ github.sha }}
+          path: |
+            baynana-webkit-startup-error.png
+            /tmp/baynana-diagnostic.txt
+          if-no-files-found: ignore
+
+      - name: Create diagnostic issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f /tmp/baynana-diagnostic.txt ]; then
+            printf 'The workflow failed before the browser diagnostic was generated.\n\nCommit: `%s`\n' "$GITHUB_SHA" > /tmp/baynana-diagnostic.txt
+          fi
+          gh issue create \
+            --title "Web startup diagnostic ${GITHUB_SHA:0:8}" \
+            --body-file /tmp/baynana-diagnostic.txt || true
 
       - name: Add GitHub Pages fallback and deployment marker
         run: |
