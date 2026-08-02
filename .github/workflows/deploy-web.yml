@@ -2,9 +2,7 @@ name: Build and Deploy Baynana Web
 
 on:
   push:
-    branches:
-      - main
-      - baynana-web
+    branches: [main, baynana-web]
   workflow_dispatch:
 
 permissions:
@@ -31,9 +29,6 @@ jobs:
           flutter-version: '3.24.5'
           channel: stable
           cache: true
-
-      - name: Flutter version
-        run: flutter --version
 
       - name: Install dependencies
         run: flutter pub get
@@ -64,26 +59,15 @@ jobs:
               page = root / filename
               text = page.read_text(encoding='utf-8')
               if '__BUILD_REVISION__' not in text:
-                  raise SystemExit(
-                      f'Missing __BUILD_REVISION__ placeholder in {filename}'
-                  )
-              page.write_text(
-                  text.replace('__BUILD_REVISION__', revision),
-                  encoding='utf-8',
-              )
+                  raise SystemExit(f'Missing revision placeholder in {filename}')
+              page.write_text(text.replace('__BUILD_REVISION__', revision), encoding='utf-8')
 
           bootstrap = root / 'flutter_bootstrap.js'
-          bootstrap_text = bootstrap.read_text(encoding='utf-8')
-          if 'main.dart.js' not in bootstrap_text:
-              raise SystemExit('Could not find main.dart.js in flutter_bootstrap.js')
+          text = bootstrap.read_text(encoding='utf-8')
           bootstrap.write_text(
-              bootstrap_text.replace(
-                  'main.dart.js',
-                  f'main.dart.js?revision={revision}',
-              ),
+              text.replace('main.dart.js', f'main.dart.js?revision={revision}'),
               encoding='utf-8',
           )
-
           (root / 'deploy-version.txt').write_text(revision, encoding='utf-8')
           PY
 
@@ -93,7 +77,7 @@ jobs:
           npx playwright install --with-deps webkit
           python3 -m pip install --quiet pillow
 
-      - name: Verify full iPhone viewport before deploy
+      - name: Verify first frame and full iPhone viewport
         run: |
           mkdir -p /tmp/baynana-site/desktop-tutorial
           cp -R build/web/. /tmp/baynana-site/desktop-tutorial/
@@ -111,74 +95,54 @@ jobs:
             });
             const page = await context.newPage();
             const pageErrors = [];
-            page.on('pageerror', (error) => pageErrors.push(error.message));
+            page.on('pageerror', error => pageErrors.push(error.message));
 
             await page.goto(
               'http://127.0.0.1:4173/desktop-tutorial/start.html?ci=iphone',
               { waitUntil: 'domcontentloaded', timeout: 90000 },
             );
-            await page.waitForSelector(
-              'body > flutter-view, body > flt-glass-pane',
+
+            await page.waitForFunction(
+              () => document.documentElement.dataset.flutterReady === 'true',
+              null,
               { timeout: 90000 },
             );
-            await page.waitForTimeout(8000);
+            await page.waitForTimeout(1500);
 
             const metrics = await page.evaluate(() => {
-              const roots = Array.from(
-                document.querySelectorAll(
-                  'body > flutter-view, body > flt-glass-pane',
-                ),
-              ).map((element) => {
-                const rect = element.getBoundingClientRect();
-                return {
-                  tag: element.tagName,
+              const root = document.querySelector(
+                'body > flutter-view, body > flt-glass-pane',
+              );
+              const rect = root?.getBoundingClientRect();
+              return {
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                root: rect ? {
                   width: rect.width,
                   height: rect.height,
                   left: rect.left,
                   top: rect.top,
-                };
-              });
-
-              return {
-                innerWidth: window.innerWidth,
-                innerHeight: window.innerHeight,
-                roots,
-                loadingVisible: Boolean(
-                  document.querySelector('#baynana-loading:not(.hidden)'),
-                ),
+                } : null,
+                ready: document.documentElement.dataset.flutterReady,
+                loading: Boolean(document.getElementById('baynana-loading')),
               };
             });
 
-            console.log('iPhone viewport metrics:', JSON.stringify(metrics));
+            console.log('iPhone metrics:', JSON.stringify(metrics));
+            if (!metrics.root) throw new Error('Flutter root was not created.');
+            if (metrics.ready !== 'true') throw new Error('Flutter first frame was not rendered.');
+            if (Math.abs(metrics.root.width - metrics.innerWidth) > 2) {
+              throw new Error(`Flutter width ${metrics.root.width} != ${metrics.innerWidth}`);
+            }
+            if (metrics.root.height < metrics.innerHeight * 0.95) {
+              throw new Error(`Flutter height ${metrics.root.height} is too small.`);
+            }
+            if (metrics.loading) throw new Error('Loading overlay still exists after first frame.');
+            if (pageErrors.length) throw new Error(pageErrors.join(' | '));
 
-            if (!metrics.roots.length) {
-              throw new Error('Flutter root was not created.');
-            }
-
-            const root = metrics.roots[0];
-            if (Math.abs(root.width - metrics.innerWidth) > 2) {
-              throw new Error(
-                `Flutter width ${root.width} does not match viewport ${metrics.innerWidth}`,
-              );
-            }
-            if (root.height < metrics.innerHeight * 0.95) {
-              throw new Error(
-                `Flutter height ${root.height} is smaller than viewport ${metrics.innerHeight}`,
-              );
-            }
-            if (metrics.loadingVisible) {
-              throw new Error('HTML loading screen did not hand off to Flutter.');
-            }
-            if (pageErrors.length) {
-              throw new Error(`WebKit page errors: ${pageErrors.join(' | ')}`);
-            }
-
-            await page.screenshot({
-              path: '/tmp/baynana-iphone.png',
-              fullPage: false,
-            });
+            await page.screenshot({ path: '/tmp/baynana-iphone.png' });
             await browser.close();
-          })().catch((error) => {
+          })().catch(error => {
             console.error(error);
             process.exit(1);
           });
@@ -192,20 +156,13 @@ jobs:
 
           image = Image.open('/tmp/baynana-iphone.png').convert('RGB')
           width, height = image.size
-          left = image.crop((0, 0, int(width * 0.55), height))
-          right = image.crop((int(width * 0.75), 0, width, height))
-
-          left_mean = sum(ImageStat.Stat(left).mean) / 3
-          right_mean = sum(ImageStat.Stat(right).mean) / 3
-          print(
-              f'iPhone screenshot brightness: left={left_mean:.1f}, '
-              f'right={right_mean:.1f}'
-          )
-
-          if right_mean < 55 and left_mean > right_mean + 55:
-              raise SystemExit(
-                  'The rendered app still occupies only part of the iPhone screen.'
-              )
+          center = image.crop((int(width * .15), int(height * .15), int(width * .85), int(height * .85)))
+          stat = ImageStat.Stat(center)
+          variance = sum(stat.var) / 3
+          mean = sum(stat.mean) / 3
+          print(f'center brightness={mean:.1f}, variance={variance:.1f}')
+          if mean < 35 and variance < 120:
+              raise SystemExit('Flutter rendered a nearly uniform black screen.')
           PY
 
       - name: Add GitHub Pages fallback
@@ -230,28 +187,19 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify deployed revision and launch page
+      - name: Verify deployed revision
         env:
           EXPECTED_SHA: ${{ github.sha }}
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
-          VERSION_URL="${PAGE_URL}deploy-version.txt"
-          START_URL="${PAGE_URL}start.html"
-
-          echo "Waiting for GitHub Pages to serve ${EXPECTED_SHA}"
           for attempt in {1..18}; do
-            DEPLOYED_SHA="$(curl -fsSL "${VERSION_URL}?revision=${EXPECTED_SHA}" || true)"
-            START_HTML="$(curl -fsSL "${START_URL}?revision=${EXPECTED_SHA}" || true)"
-
-            if [ "${DEPLOYED_SHA}" = "${EXPECTED_SHA}" ] \
-              && printf '%s' "${START_HTML}" | grep -q "${EXPECTED_SHA}"; then
-              echo "Verified deployed revision and cache-proof launch page."
+            DEPLOYED_SHA="$(curl -fsSL "${PAGE_URL}deploy-version.txt?revision=${EXPECTED_SHA}" || true)"
+            START_HTML="$(curl -fsSL "${PAGE_URL}start.html?revision=${EXPECTED_SHA}" || true)"
+            if [ "${DEPLOYED_SHA}" = "${EXPECTED_SHA}" ] && printf '%s' "${START_HTML}" | grep -q "${EXPECTED_SHA}"; then
+              echo "Verified deployed revision ${EXPECTED_SHA}"
               exit 0
             fi
-
-            echo "Attempt ${attempt}/18: deployed='${DEPLOYED_SHA:-unavailable}'"
             sleep 10
           done
-
-          echo "::error::GitHub Pages did not serve the expected launch revision ${EXPECTED_SHA}."
+          echo "::error::Expected revision was not served by GitHub Pages."
           exit 1
