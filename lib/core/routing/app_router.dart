@@ -29,7 +29,6 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../presentation/screens/not_found_screen.dart';
 
-/// أسماء المسارات
 class AppRoutes {
   AppRoutes._();
 
@@ -59,12 +58,13 @@ class AppRoutes {
   static const String notificationSettings = '/notifications/settings';
 }
 
-/// إعداد التوجيه
 class AppRouter {
   AppRouter._();
 
   static final GoRouter router = GoRouter(
-    initialLocation: AppRoutes.splash,
+    // نقطة دخول ثابتة وقابلة للاختبار للنسخة التجريبية على الويب.
+    // شاشة البداية تبقى متاحة لكن لا تتحكم في أول Frame.
+    initialLocation: AppRoutes.login,
     errorBuilder: (context, state) =>
         NotFoundScreen(message: state.error?.toString()),
     redirect: (context, state) {
@@ -77,9 +77,9 @@ class AppRouter {
         AppRoutes.register,
         AppRoutes.forgotPassword,
       };
-      if (!signedIn && !publicRoutes.contains(location)) return AppRoutes.login;
-      if (signedIn && (location == AppRoutes.login || location == AppRoutes.register)) {
-        return AppRoutes.home;
+
+      if (!signedIn && !publicRoutes.contains(location)) {
+        return AppRoutes.login;
       }
       return null;
     },
@@ -112,7 +112,6 @@ class AppRouter {
         path: AppRoutes.games,
         builder: (context, state) => const GamesHubScreen(),
         routes: [
-          // /games/:type — شاشة اللعب
           GoRoute(
             path: ':type',
             builder: (context, state) {
