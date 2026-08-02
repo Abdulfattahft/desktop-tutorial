@@ -28,7 +28,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.0'
+          flutter-version: '3.24.5'
           channel: stable
           cache: true
 
@@ -44,9 +44,9 @@ jobs:
       - name: Build web release
         run: |
           flutter build web --release \
+            --web-renderer html \
             --base-href "/desktop-tutorial/" \
             --pwa-strategy=none \
-            --no-wasm-dry-run \
             --source-maps \
             --dart-define=USE_PATH_URL_STRATEGY=false
 
@@ -109,6 +109,7 @@ jobs:
             const context = await browser.newContext({
               ...devices['iPhone 15 Pro'],
               locale: 'ar-SA',
+              colorScheme: 'dark',
             });
             const page = await context.newPage();
 
