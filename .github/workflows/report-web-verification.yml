@@ -1,0 +1,37 @@
+name: Report Baynana Web Verification
+
+on:
+  workflow_run:
+    workflows:
+      - Build and Deploy Baynana Web
+    types:
+      - completed
+
+permissions:
+  issues: write
+
+jobs:
+  report:
+    if: github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish verification result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          cat > /tmp/verification.md <<EOF
+          Automated iPhone WebKit verification result: **${CONCLUSION}**
+
+          Commit: `${HEAD_SHA}`
+
+          The deployment workflow only succeeds after the real Flutter login screen reports `baynanaScreen=login`, the loading overlay is removed, no uncaught page errors are present, and the Flutter surface fills the iPhone viewport.
+
+          Workflow run: ${RUN_URL}
+          EOF
+
+          gh issue create \
+            --title "Web verification ${CONCLUSION} ${HEAD_SHA:0:8}" \
+            --body-file /tmp/verification.md
