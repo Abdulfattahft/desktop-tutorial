@@ -1,3 +1,5 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -35,6 +37,7 @@ import 'features/settings/presentation/viewmodels/settings_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _installVisibleErrorHandlers();
 
   try {
     await WebFontService.load();
@@ -48,7 +51,7 @@ Future<void> main() async {
     if (kIsWeb) {
       if (!WebFirebaseOptions.isConfigured) {
         await initializeDateFormatting('ar');
-        _runAndMarkReady(const _FirebaseSetupApp());
+        _runMarkedApp(const _FirebaseSetupApp(), screen: 'firebase-setup');
         return;
       }
       await Firebase.initializeApp(options: WebFirebaseOptions.current);
@@ -65,7 +68,9 @@ Future<void> main() async {
     await initializeDateFormatting('ar');
     AIConfig.registerProviders();
 
-    _runAndMarkReady(
+    // لا نعلن نجاح الويب هنا. شاشة تسجيل الدخول نفسها تعلن الجاهزية
+    // بعد أن تُرسم فعليًا، حتى لا تختفي شاشة التحميل فوق صفحة فارغة.
+    runApp(
       MultiProvider(
         providers: [
           Provider<AuthRepository>(create: (_) => AuthRepository()),
@@ -126,13 +131,109 @@ Future<void> main() async {
     );
   } catch (error, stackTrace) {
     debugPrint('Baynana startup failed: $error\n$stackTrace');
-    _runAndMarkReady(_StartupFailureApp(message: error.toString()));
+    _runMarkedApp(
+      _StartupFailureApp(message: error.toString()),
+      screen: 'startup-error',
+    );
   }
 }
 
-void _runAndMarkReady(Widget app) {
-  WidgetsBinding.instance.addPostFrameCallback((_) => markWebAppReady());
+void _installVisibleErrorHandlers() {
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Uncaught platform error: $error\n$stack');
+    return false;
+  };
+
+  ErrorWidget.builder = (details) => _VisibleErrorWidget(
+        message: details.exceptionAsString(),
+      );
+}
+
+void _runMarkedApp(Widget app, {required String screen}) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    markWebAppReady(screen: screen);
+  });
   runApp(app);
+}
+
+class _VisibleErrorWidget extends StatefulWidget {
+  final String message;
+
+  const _VisibleErrorWidget({required this.message});
+
+  @override
+  State<_VisibleErrorWidget> createState() => _VisibleErrorWidgetState();
+}
+
+class _VisibleErrorWidgetState extends State<_VisibleErrorWidget> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      markWebAppReady(screen: 'flutter-error');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFF1E1A19),
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A2422),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF76504F)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: Color(0xFFFFB4AB),
+                        size: 46,
+                      ),
+                      const SizedBox(height: 14),
+                      const Text(
+                        'خطأ في واجهة تطبيق بيننا',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SelectableText(
+                        widget.message,
+                        textDirection: TextDirection.ltr,
+                        style: const TextStyle(
+                          color: Color(0xFFFFB4AB),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _StartupFailureApp extends StatelessWidget {
