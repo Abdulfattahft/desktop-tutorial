@@ -1,4 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/ai/presentation/screens/ai_assistant_screen.dart';
@@ -21,15 +23,14 @@ import '../../features/memories/presentation/screens/memory_detail_screen.dart';
 import '../../features/notifications/presentation/screens/notification_settings_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
+import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/settings/presentation/screens/delete_account_screen.dart';
 import '../../features/settings/presentation/screens/edit_profile_screen.dart';
 import '../../features/settings/presentation/screens/legal_screen.dart';
 import '../../features/settings/presentation/screens/relationship_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
-import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../presentation/screens/not_found_screen.dart';
 
-/// أسماء المسارات
 class AppRoutes {
   AppRoutes._();
 
@@ -59,14 +60,17 @@ class AppRoutes {
   static const String notificationSettings = '/notifications/settings';
 }
 
-/// إعداد التوجيه
 class AppRouter {
   AppRouter._();
 
   static final GoRouter router = GoRouter(
-    initialLocation: AppRoutes.splash,
-    errorBuilder: (context, state) =>
-        NotFoundScreen(message: state.error?.toString()),
+    // The animated splash was the first widget to fail on iPhone WebKit with
+    // the HTML renderer. Web starts from a stable auth screen; signed-in users
+    // are redirected to home by the guard below.
+    initialLocation: kIsWeb ? AppRoutes.login : AppRoutes.splash,
+    errorBuilder: (context, state) => NotFoundScreen(
+      message: state.error?.toString() ?? 'تعذر فتح الصفحة المطلوبة',
+    ),
     redirect: (context, state) {
       final signedIn = FirebaseAuth.instance.currentUser != null;
       final location = state.matchedLocation;
@@ -78,7 +82,8 @@ class AppRouter {
         AppRoutes.forgotPassword,
       };
       if (!signedIn && !publicRoutes.contains(location)) return AppRoutes.login;
-      if (signedIn && (location == AppRoutes.login || location == AppRoutes.register)) {
+      if (signedIn &&
+          (location == AppRoutes.login || location == AppRoutes.register)) {
         return AppRoutes.home;
       }
       return null;
@@ -112,7 +117,6 @@ class AppRouter {
         path: AppRoutes.games,
         builder: (context, state) => const GamesHubScreen(),
         routes: [
-          // /games/:type — شاشة اللعب
           GoRoute(
             path: ':type',
             builder: (context, state) {
