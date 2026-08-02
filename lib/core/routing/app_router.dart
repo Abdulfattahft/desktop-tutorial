@@ -1,6 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/ai/presentation/screens/ai_assistant_screen.dart';
@@ -23,12 +21,12 @@ import '../../features/memories/presentation/screens/memory_detail_screen.dart';
 import '../../features/notifications/presentation/screens/notification_settings_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
-import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/settings/presentation/screens/delete_account_screen.dart';
 import '../../features/settings/presentation/screens/edit_profile_screen.dart';
 import '../../features/settings/presentation/screens/legal_screen.dart';
 import '../../features/settings/presentation/screens/relationship_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../presentation/screens/not_found_screen.dart';
 
 class AppRoutes {
@@ -64,13 +62,9 @@ class AppRouter {
   AppRouter._();
 
   static final GoRouter router = GoRouter(
-    // The animated splash was the first widget to fail on iPhone WebKit with
-    // the HTML renderer. Web starts from a stable auth screen; signed-in users
-    // are redirected to home by the guard below.
-    initialLocation: kIsWeb ? AppRoutes.login : AppRoutes.splash,
-    errorBuilder: (context, state) => NotFoundScreen(
-      message: state.error?.toString() ?? 'تعذر فتح الصفحة المطلوبة',
-    ),
+    initialLocation: AppRoutes.splash,
+    errorBuilder: (context, state) =>
+        NotFoundScreen(message: state.error?.toString()),
     redirect: (context, state) {
       final signedIn = FirebaseAuth.instance.currentUser != null;
       final location = state.matchedLocation;
@@ -89,33 +83,15 @@ class AppRouter {
       return null;
     },
     routes: [
-      GoRoute(
-        path: AppRoutes.splash,
-        builder: (context, state) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.onboarding,
-        builder: (context, state) => const OnboardingScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.login,
-        builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.register,
-        builder: (context, state) => const RegisterScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.forgotPassword,
-        builder: (context, state) => const ForgotPasswordScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.linkPartner,
-        builder: (context, state) => const LinkPartnerScreen(),
-      ),
+      GoRoute(path: AppRoutes.splash, builder: (_, __) => const SplashScreen()),
+      GoRoute(path: AppRoutes.onboarding, builder: (_, __) => const OnboardingScreen()),
+      GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
+      GoRoute(path: AppRoutes.register, builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: AppRoutes.forgotPassword, builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(path: AppRoutes.linkPartner, builder: (_, __) => const LinkPartnerScreen()),
       GoRoute(
         path: AppRoutes.games,
-        builder: (context, state) => const GamesHubScreen(),
+        builder: (_, __) => const GamesHubScreen(),
         routes: [
           GoRoute(
             path: ':type',
@@ -128,71 +104,26 @@ class AppRouter {
           ),
         ],
       ),
-      GoRoute(
-        path: AppRoutes.challenges,
-        builder: (context, state) => const ChallengesScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.gifts,
-        builder: (context, state) => const GiftsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.settings,
-        builder: (context, state) => const SettingsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.editProfile,
-        builder: (context, state) => const EditProfileScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.relationship,
-        builder: (context, state) => const RelationshipScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.deleteAccount,
-        builder: (context, state) => const DeleteAccountScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.privacyPolicy,
-        builder: (context, state) => const LegalScreen(isPrivacy: true),
-      ),
-      GoRoute(
-        path: AppRoutes.terms,
-        builder: (context, state) => const LegalScreen(isPrivacy: false),
-      ),
-      GoRoute(
-        path: AppRoutes.ai,
-        builder: (context, state) => const AIAssistantScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.aiSettings,
-        builder: (context, state) => const AISettingsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.notifications,
-        builder: (context, state) => const NotificationsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.notificationSettings,
-        builder: (context, state) => const NotificationSettingsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.memories,
-        builder: (context, state) => const MemoriesScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.memoriesAdd,
-        builder: (context, state) => const AddMemoryScreen(),
-      ),
+      GoRoute(path: AppRoutes.challenges, builder: (_, __) => const ChallengesScreen()),
+      GoRoute(path: AppRoutes.gifts, builder: (_, __) => const GiftsScreen()),
+      GoRoute(path: AppRoutes.settings, builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: AppRoutes.editProfile, builder: (_, __) => const EditProfileScreen()),
+      GoRoute(path: AppRoutes.relationship, builder: (_, __) => const RelationshipScreen()),
+      GoRoute(path: AppRoutes.deleteAccount, builder: (_, __) => const DeleteAccountScreen()),
+      GoRoute(path: AppRoutes.privacyPolicy, builder: (_, __) => const LegalScreen(isPrivacy: true)),
+      GoRoute(path: AppRoutes.terms, builder: (_, __) => const LegalScreen(isPrivacy: false)),
+      GoRoute(path: AppRoutes.ai, builder: (_, __) => const AIAssistantScreen()),
+      GoRoute(path: AppRoutes.aiSettings, builder: (_, __) => const AISettingsScreen()),
+      GoRoute(path: AppRoutes.notifications, builder: (_, __) => const NotificationsScreen()),
+      GoRoute(path: AppRoutes.notificationSettings, builder: (_, __) => const NotificationSettingsScreen()),
+      GoRoute(path: AppRoutes.memories, builder: (_, __) => const MemoriesScreen()),
+      GoRoute(path: AppRoutes.memoriesAdd, builder: (_, __) => const AddMemoryScreen()),
       GoRoute(
         path: AppRoutes.memoryDetail,
         builder: (context, state) =>
             MemoryDetailScreen(initial: state.extra as MemoryModel),
       ),
-      GoRoute(
-        path: AppRoutes.home,
-        builder: (context, state) => const HomeScreen(),
-      ),
+      GoRoute(path: AppRoutes.home, builder: (_, __) => const HomeScreen()),
     ],
   );
 }
