@@ -1,12 +1,16 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'app.dart';
+import 'core/config/web_firebase_options.dart';
+import 'core/services/push_notification_service.dart';
+import 'core/services/web_font_service.dart';
+import 'core/services/web_ready_service.dart';
 import 'features/ai/ai_config.dart';
 import 'features/ai/data/repositories/ai_repository.dart';
 import 'features/ai/presentation/viewmodels/ai_viewmodel.dart';
@@ -21,104 +25,190 @@ import 'features/gifts/presentation/viewmodels/gifts_viewmodel.dart';
 import 'features/home/data/repositories/home_repository.dart';
 import 'features/home/presentation/viewmodels/home_viewmodel.dart';
 import 'features/linking/data/repositories/linking_repository.dart';
+import 'features/linking/presentation/viewmodels/linking_viewmodel.dart';
 import 'features/memories/data/repositories/memories_repository.dart';
 import 'features/memories/presentation/viewmodels/memories_viewmodel.dart';
 import 'features/notifications/data/repositories/notifications_repository.dart';
 import 'features/notifications/presentation/viewmodels/notifications_viewmodel.dart';
 import 'features/settings/data/repositories/settings_repository.dart';
 import 'features/settings/presentation/viewmodels/settings_viewmodel.dart';
-import 'core/services/push_notification_service.dart';
-import 'core/services/web_font_service.dart';
-import 'core/config/web_firebase_options.dart';
-import 'features/linking/presentation/viewmodels/linking_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await WebFontService.load();
 
-  const enablePathUrls = bool.fromEnvironment(
-    'USE_PATH_URL_STRATEGY',
-    defaultValue: true,
-  );
-  if (kIsWeb && enablePathUrls) usePathUrlStrategy();
+  try {
+    await WebFontService.load();
 
-  if (kIsWeb) {
-    if (!WebFirebaseOptions.isConfigured) {
-      await initializeDateFormatting('ar');
-      runApp(const _FirebaseSetupApp());
-      return;
+    const enablePathUrls = bool.fromEnvironment(
+      'USE_PATH_URL_STRATEGY',
+      defaultValue: true,
+    );
+    if (kIsWeb && enablePathUrls) usePathUrlStrategy();
+
+    if (kIsWeb) {
+      if (!WebFirebaseOptions.isConfigured) {
+        await initializeDateFormatting('ar');
+        _runAndMarkReady(const _FirebaseSetupApp());
+        return;
+      }
+      await Firebase.initializeApp(options: WebFirebaseOptions.current);
+    } else {
+      await Firebase.initializeApp();
     }
-    await Firebase.initializeApp(options: WebFirebaseOptions.current);
-  } else {
-    await Firebase.initializeApp();
+
+    if (!kIsWeb) {
+      FirebaseMessaging.onBackgroundMessage(
+        firebaseMessagingBackgroundHandler,
+      );
+    }
+
+    await initializeDateFormatting('ar');
+    AIConfig.registerProviders();
+
+    _runAndMarkReady(
+      MultiProvider(
+        providers: [
+          Provider<AuthRepository>(create: (_) => AuthRepository()),
+          Provider<LinkingRepository>(create: (_) => LinkingRepository()),
+          Provider<GamesRepository>(create: (_) => GamesRepository()),
+          Provider<HomeRepository>(create: (_) => HomeRepository()),
+          Provider<ChallengesRepository>(
+            create: (_) => ChallengesRepository(),
+          ),
+          Provider<MemoriesRepository>(create: (_) => MemoriesRepository()),
+          Provider<GiftsRepository>(create: (_) => GiftsRepository()),
+          Provider<NotificationsRepository>(
+            create: (_) => NotificationsRepository(),
+          ),
+          Provider<AIRepository>(
+            create: (_) => AIRepository(AIConfig.buildActive()),
+          ),
+          Provider<SettingsRepository>(create: (_) => SettingsRepository()),
+          ChangeNotifierProvider<AuthViewModel>(
+            create: (ctx) => AuthViewModel(ctx.read<AuthRepository>()),
+          ),
+          ChangeNotifierProvider<LinkingViewModel>(
+            create: (ctx) => LinkingViewModel(ctx.read<LinkingRepository>()),
+          ),
+          ChangeNotifierProvider<GamesViewModel>(
+            create: (ctx) => GamesViewModel(ctx.read<GamesRepository>()),
+          ),
+          ChangeNotifierProvider<HomeViewModel>(
+            create: (ctx) => HomeViewModel(ctx.read<HomeRepository>()),
+          ),
+          ChangeNotifierProvider<ChallengesViewModel>(
+            create: (ctx) =>
+                ChallengesViewModel(ctx.read<ChallengesRepository>()),
+          ),
+          ChangeNotifierProvider<MemoriesViewModel>(
+            create: (ctx) =>
+                MemoriesViewModel(ctx.read<MemoriesRepository>()),
+          ),
+          ChangeNotifierProvider<GiftsViewModel>(
+            create: (ctx) => GiftsViewModel(ctx.read<GiftsRepository>()),
+          ),
+          ChangeNotifierProvider<NotificationsViewModel>(
+            create: (ctx) => NotificationsViewModel(
+              ctx.read<NotificationsRepository>(),
+            ),
+          ),
+          ChangeNotifierProvider<AIViewModel>(
+            create: (ctx) => AIViewModel(ctx.read<AIRepository>()),
+          ),
+          ChangeNotifierProvider<SettingsViewModel>(
+            create: (ctx) => SettingsViewModel(
+              ctx.read<SettingsRepository>(),
+            ),
+          ),
+        ],
+        child: const BaynanaApp(),
+      ),
+    );
+  } catch (error, stackTrace) {
+    debugPrint('Baynana startup failed: $error\n$stackTrace');
+    _runAndMarkReady(_StartupFailureApp(message: error.toString()));
   }
+}
 
-  if (!kIsWeb) {
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-  }
+void _runAndMarkReady(Widget app) {
+  WidgetsBinding.instance.addPostFrameCallback((_) => markWebAppReady());
+  runApp(app);
+}
 
-  await initializeDateFormatting('ar');
-  AIConfig.registerProviders();
+class _StartupFailureApp extends StatelessWidget {
+  final String message;
 
-  runApp(
-    MultiProvider(
-      providers: [
-        Provider<AuthRepository>(create: (_) => AuthRepository()),
-        Provider<LinkingRepository>(create: (_) => LinkingRepository()),
-        Provider<GamesRepository>(create: (_) => GamesRepository()),
-        Provider<HomeRepository>(create: (_) => HomeRepository()),
-        Provider<ChallengesRepository>(
-          create: (_) => ChallengesRepository(),
-        ),
-        Provider<MemoriesRepository>(create: (_) => MemoriesRepository()),
-        Provider<GiftsRepository>(create: (_) => GiftsRepository()),
-        Provider<NotificationsRepository>(
-          create: (_) => NotificationsRepository(),
-        ),
-        Provider<AIRepository>(
-          create: (_) => AIRepository(AIConfig.buildActive()),
-        ),
-        Provider<SettingsRepository>(create: (_) => SettingsRepository()),
-        ChangeNotifierProvider<AuthViewModel>(
-          create: (ctx) => AuthViewModel(ctx.read<AuthRepository>()),
-        ),
-        ChangeNotifierProvider<LinkingViewModel>(
-          create: (ctx) => LinkingViewModel(ctx.read<LinkingRepository>()),
-        ),
-        ChangeNotifierProvider<GamesViewModel>(
-          create: (ctx) => GamesViewModel(ctx.read<GamesRepository>()),
-        ),
-        ChangeNotifierProvider<HomeViewModel>(
-          create: (ctx) => HomeViewModel(ctx.read<HomeRepository>()),
-        ),
-        ChangeNotifierProvider<ChallengesViewModel>(
-          create: (ctx) =>
-              ChallengesViewModel(ctx.read<ChallengesRepository>()),
-        ),
-        ChangeNotifierProvider<MemoriesViewModel>(
-          create: (ctx) =>
-              MemoriesViewModel(ctx.read<MemoriesRepository>()),
-        ),
-        ChangeNotifierProvider<GiftsViewModel>(
-          create: (ctx) => GiftsViewModel(ctx.read<GiftsRepository>()),
-        ),
-        ChangeNotifierProvider<NotificationsViewModel>(
-          create: (ctx) => NotificationsViewModel(
-            ctx.read<NotificationsRepository>(),
+  const _StartupFailureApp({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('ar'),
+      home: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Scaffold(
+          backgroundColor: const Color(0xFF1E1A19),
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2A2422),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFF76504F)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          color: Color(0xFFFFB4AB),
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'تعذر بدء تطبيق بيننا',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'ظهرت مشكلة أثناء تهيئة خدمات التطبيق.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFFE0D6D2),
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SelectableText(
+                          message,
+                          textDirection: TextDirection.ltr,
+                          style: const TextStyle(
+                            color: Color(0xFFFFB4AB),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-        ChangeNotifierProvider<AIViewModel>(
-          create: (ctx) => AIViewModel(ctx.read<AIRepository>()),
-        ),
-        ChangeNotifierProvider<SettingsViewModel>(
-          create: (ctx) => SettingsViewModel(
-            ctx.read<SettingsRepository>(),
-          ),
-        ),
-      ],
-      child: const BaynanaApp(),
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _FirebaseSetupApp extends StatelessWidget {
