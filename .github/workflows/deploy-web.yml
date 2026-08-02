@@ -41,9 +41,10 @@ jobs:
       - name: Analyze Dart code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build web release
+      - name: Build web release with HTML renderer
         run: |
           flutter build web --release \
+            --web-renderer html \
             --base-href "/desktop-tutorial/" \
             --pwa-strategy=none \
             --dart-define=USE_PATH_URL_STRATEGY=false
@@ -84,6 +85,126 @@ jobs:
           )
 
           (root / 'deploy-version.txt').write_text(revision, encoding='utf-8')
+          PY
+
+      - name: Install WebKit viewport test
+        run: |
+          npm install --no-save playwright@1.54.2
+          npx playwright install --with-deps webkit
+          python3 -m pip install --quiet pillow
+
+      - name: Verify full iPhone viewport before deploy
+        run: |
+          mkdir -p /tmp/baynana-site/desktop-tutorial
+          cp -R build/web/. /tmp/baynana-site/desktop-tutorial/
+          python3 -m http.server 4173 --directory /tmp/baynana-site >/tmp/baynana-http.log 2>&1 &
+
+          cat > /tmp/verify-baynana.cjs <<'JS'
+          const { webkit, devices } = require('playwright');
+
+          (async () => {
+            const browser = await webkit.launch();
+            const context = await browser.newContext({
+              ...devices['iPhone 13'],
+              colorScheme: 'light',
+              locale: 'ar-SA',
+            });
+            const page = await context.newPage();
+            const pageErrors = [];
+            page.on('pageerror', (error) => pageErrors.push(error.message));
+
+            await page.goto(
+              'http://127.0.0.1:4173/desktop-tutorial/start.html?ci=iphone',
+              { waitUntil: 'domcontentloaded', timeout: 90000 },
+            );
+            await page.waitForSelector(
+              'body > flutter-view, body > flt-glass-pane',
+              { timeout: 90000 },
+            );
+            await page.waitForTimeout(8000);
+
+            const metrics = await page.evaluate(() => {
+              const roots = Array.from(
+                document.querySelectorAll(
+                  'body > flutter-view, body > flt-glass-pane',
+                ),
+              ).map((element) => {
+                const rect = element.getBoundingClientRect();
+                return {
+                  tag: element.tagName,
+                  width: rect.width,
+                  height: rect.height,
+                  left: rect.left,
+                  top: rect.top,
+                };
+              });
+
+              return {
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                roots,
+                loadingVisible: Boolean(
+                  document.querySelector('#baynana-loading:not(.hidden)'),
+                ),
+              };
+            });
+
+            console.log('iPhone viewport metrics:', JSON.stringify(metrics));
+
+            if (!metrics.roots.length) {
+              throw new Error('Flutter root was not created.');
+            }
+
+            const root = metrics.roots[0];
+            if (Math.abs(root.width - metrics.innerWidth) > 2) {
+              throw new Error(
+                `Flutter width ${root.width} does not match viewport ${metrics.innerWidth}`,
+              );
+            }
+            if (root.height < metrics.innerHeight * 0.95) {
+              throw new Error(
+                `Flutter height ${root.height} is smaller than viewport ${metrics.innerHeight}`,
+              );
+            }
+            if (metrics.loadingVisible) {
+              throw new Error('HTML loading screen did not hand off to Flutter.');
+            }
+            if (pageErrors.length) {
+              throw new Error(`WebKit page errors: ${pageErrors.join(' | ')}`);
+            }
+
+            await page.screenshot({
+              path: '/tmp/baynana-iphone.png',
+              fullPage: false,
+            });
+            await browser.close();
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          JS
+
+          node /tmp/verify-baynana.cjs
+
+          python3 - <<'PY'
+          from PIL import Image, ImageStat
+
+          image = Image.open('/tmp/baynana-iphone.png').convert('RGB')
+          width, height = image.size
+          left = image.crop((0, 0, int(width * 0.55), height))
+          right = image.crop((int(width * 0.75), 0, width, height))
+
+          left_mean = sum(ImageStat.Stat(left).mean) / 3
+          right_mean = sum(ImageStat.Stat(right).mean) / 3
+          print(
+              f'iPhone screenshot brightness: left={left_mean:.1f}, '
+              f'right={right_mean:.1f}'
+          )
+
+          if right_mean < 55 and left_mean > right_mean + 55:
+              raise SystemExit(
+                  'The rendered app still occupies only part of the iPhone screen.'
+              )
           PY
 
       - name: Add GitHub Pages fallback
