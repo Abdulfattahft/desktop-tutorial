@@ -20,7 +20,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: responsive-preview
+  group: responsive-preview-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -57,13 +57,12 @@ jobs:
       - name: Upload preview build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: responsive-preview-build
+          name: responsive-preview-build-${{ github.event_name }}
           path: build/web
           retention-days: 7
 
   deploy-preview:
     name: Deploy responsive preview
-    if: github.event_name == 'push'
     needs: validate
     runs-on: ubuntu-latest
     environment:
