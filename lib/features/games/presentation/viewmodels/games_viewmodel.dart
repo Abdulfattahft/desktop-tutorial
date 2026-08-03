@@ -18,6 +18,8 @@ class GamesViewModel extends ChangeNotifier {
   bool isBusy = false;
   String? errorMessage;
   int feedbackRevision = 0;
+  int completionRevision = 0;
+  GameCompletionResult? lastCompletionResult;
 
   Stream<GameSession?> sessionStream(String coupleId, GameType type) =>
       _repo.sessionStream(coupleId, type);
@@ -106,10 +108,16 @@ class GamesViewModel extends ChangeNotifier {
     required int fromRound,
   }) =>
       _guarded(() async {
-        await _completionService.finishGame(
+        final result = await _completionService.finishGame(
           coupleId: coupleId,
           type: type,
           fromRound: fromRound,
         );
+
+        if (result.status == 'finished' ||
+            result.status == 'already-finished') {
+          lastCompletionResult = result;
+          completionRevision += 1;
+        }
       });
 }
