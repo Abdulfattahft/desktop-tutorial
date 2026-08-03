@@ -17,12 +17,18 @@ class GamesViewModel extends ChangeNotifier {
 
   bool isBusy = false;
   String? errorMessage;
+  int feedbackRevision = 0;
 
   Stream<GameSession?> sessionStream(String coupleId, GameType type) =>
       _repo.sessionStream(coupleId, type);
 
   Stream<List<GameHistoryEntry>> recentGames(String coupleId) =>
       _repo.recentGames(coupleId);
+
+  void _setError(String message) {
+    errorMessage = message;
+    feedbackRevision += 1;
+  }
 
   Future<bool> _guarded(Future<void> Function() action) async {
     if (isBusy) return false;
@@ -33,10 +39,10 @@ class GamesViewModel extends ChangeNotifier {
       await action();
       return true;
     } on GameCompletionException catch (error) {
-      errorMessage = error.message;
+      _setError(error.message);
       return false;
     } catch (_) {
-      errorMessage = 'حدث خطأ، تأكد من اتصالك وحاول مرة أخرى';
+      _setError('حدث خطأ، تأكد من اتصالك وحاول مرة أخرى');
       return false;
     } finally {
       isBusy = false;
@@ -85,7 +91,7 @@ class GamesViewModel extends ChangeNotifier {
     try {
       return await _repo.spinWheel(coupleId: coupleId, roundIndex: roundIndex);
     } catch (_) {
-      errorMessage = 'حدث خطأ، حاول مرة أخرى';
+      _setError('حدث خطأ، حاول مرة أخرى');
       return null;
     } finally {
       isBusy = false;
