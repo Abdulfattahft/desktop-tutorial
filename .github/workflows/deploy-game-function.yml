@@ -1,0 +1,98 @@
+name: Deploy Game Completion Function
+
+on:
+  push:
+    branches:
+      - fix/responsive-performance
+    paths:
+      - 'functions/**'
+      - '.github/workflows/deploy-game-function.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-game-completion-function
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Validate and deploy finishGame
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install function dependencies
+        run: npm install --prefix functions --ignore-scripts
+
+      - name: Validate function source
+        run: npm --prefix functions run check
+
+      - name: Resolve Firebase credentials
+        id: auth
+        shell: bash
+        env:
+          PROJECT_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BAYNANA_1047C }}
+          GENERIC_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_TOKEN_PRIMARY: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_TOKEN_FALLBACK: ${{ secrets.FIREBASE_CLI_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          SERVICE_ACCOUNT="${PROJECT_SERVICE_ACCOUNT:-${GENERIC_SERVICE_ACCOUNT:-}}"
+          FIREBASE_TOKEN_VALUE="${FIREBASE_TOKEN_PRIMARY:-${FIREBASE_TOKEN_FALLBACK:-}}"
+
+          if [ -n "${SERVICE_ACCOUNT}" ]; then
+            CREDENTIALS_FILE="${RUNNER_TEMP}/firebase-service-account.json"
+
+            if printf '%s' "${SERVICE_ACCOUNT}" | jq -e . >/dev/null 2>&1; then
+              printf '%s' "${SERVICE_ACCOUNT}" > "${CREDENTIALS_FILE}"
+            elif printf '%s' "${SERVICE_ACCOUNT}" | base64 --decode > "${CREDENTIALS_FILE}" 2>/dev/null \
+              && jq -e . "${CREDENTIALS_FILE}" >/dev/null 2>&1; then
+              echo "Decoded base64 Firebase service account."
+            else
+              echo "::error::Firebase service account secret is not valid JSON or base64 JSON."
+              exit 1
+            fi
+
+            chmod 600 "${CREDENTIALS_FILE}"
+            echo "GOOGLE_APPLICATION_CREDENTIALS=${CREDENTIALS_FILE}" >> "${GITHUB_ENV}"
+            echo "mode=service-account" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [ -n "${FIREBASE_TOKEN_VALUE}" ]; then
+            echo "FIREBASE_DEPLOY_TOKEN=${FIREBASE_TOKEN_VALUE}" >> "${GITHUB_ENV}"
+            echo "mode=token" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "::error::No Firebase deployment credential is configured. Add FIREBASE_SERVICE_ACCOUNT_BAYNANA_1047C or FIREBASE_TOKEN in repository secrets."
+          exit 1
+
+      - name: Deploy finishGame with service account
+        if: steps.auth.outputs.mode == 'service-account'
+        run: |
+          npx firebase-tools@15.24.0 deploy \
+            --only functions:finishGame \
+            --project baynana-1047c \
+            --non-interactive
+
+      - name: Deploy finishGame with Firebase token
+        if: steps.auth.outputs.mode == 'token'
+        env:
+          FIREBASE_TOKEN: ${{ env.FIREBASE_DEPLOY_TOKEN }}
+        run: |
+          npx firebase-tools@15.24.0 deploy \
+            --only functions:finishGame \
+            --project baynana-1047c \
+            --token "${FIREBASE_TOKEN}" \
+            --non-interactive
