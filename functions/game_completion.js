@@ -131,10 +131,21 @@ const finishGame = onCall(
 
         const rounds = Array.isArray(session.rounds) ? session.rounds : [];
         const currentRound = Number(session.currentRound);
-        if (!Number.isInteger(currentRound) || currentRound !== fromRound) {
+        if (!Number.isInteger(currentRound)) {
+          throw new HttpsError("failed-precondition", "رقم الجولة الحالي غير صالح");
+        }
+        if (currentRound !== fromRound) {
+          if (currentRound > fromRound) {
+            return {
+              status: "already-advanced",
+              currentRound,
+              score,
+              coinsPerPlayer: 0,
+            };
+          }
           throw new HttpsError(
             "failed-precondition",
-            "تم الانتقال من هذه الجولة بالفعل"
+            "رقم الجولة المرسل أحدث من جلسة اللعبة"
           );
         }
         if (rounds.length === 0 || currentRound >= rounds.length) {
