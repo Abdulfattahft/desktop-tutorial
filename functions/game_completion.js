@@ -113,7 +113,7 @@ const finishGame = onCall(
         const playerIds = Array.isArray(session.playerIds) ? session.playerIds : [];
 
         if (!coupleUsers.includes(callerUid) || !playerIds.includes(callerUid)) {
-          throw new HttpsError("permission-denied", "غير مصرح بإنهاء هذه اللعبة");
+          throw new HttpsError("permission-denied", "غير مصرح بإدارة هذه اللعبة");
         }
 
         const score = Math.max(0, Math.trunc(Number(session.score) || 0));
@@ -137,11 +137,8 @@ const finishGame = onCall(
             "تم الانتقال من هذه الجولة بالفعل"
           );
         }
-        if (rounds.length === 0 || currentRound !== rounds.length - 1) {
-          throw new HttpsError(
-            "failed-precondition",
-            "لا يمكن إنهاء اللعبة قبل الجولة الأخيرة"
-          );
+        if (rounds.length === 0 || currentRound >= rounds.length) {
+          throw new HttpsError("failed-precondition", "بيانات الجولات غير صالحة");
         }
 
         const answers = rounds[currentRound] && rounds[currentRound].answers;
@@ -156,7 +153,7 @@ const finishGame = onCall(
         if (!completedByAllPlayers) {
           throw new HttpsError(
             "failed-precondition",
-            "يجب أن يجيب الطرفان قبل إنهاء اللعبة"
+            "يجب أن يجيب الطرفان قبل المتابعة"
           );
         }
 
@@ -168,6 +165,17 @@ const finishGame = onCall(
             "failed-precondition",
             "بيانات اللاعبين غير متطابقة مع العلاقة"
           );
+        }
+
+        const isLastRound = currentRound === rounds.length - 1;
+        if (!isLastRound) {
+          tx.update(sessionRef, { currentRound: currentRound + 1 });
+          return {
+            status: "advanced",
+            currentRound: currentRound + 1,
+            score,
+            coinsPerPlayer: 0,
+          };
         }
 
         const userRefs = playerIds.map((uid) => db.collection("users").doc(uid));
@@ -240,7 +248,7 @@ const finishGame = onCall(
       });
       throw new HttpsError(
         "internal",
-        "تعذر إنهاء اللعبة الآن. حاول مرة أخرى"
+        "تعذر تحديث اللعبة الآن. حاول مرة أخرى"
       );
     }
   }
