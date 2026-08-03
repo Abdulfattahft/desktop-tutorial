@@ -93,18 +93,8 @@ class GamesViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> advanceRound({
-    required String coupleId,
-    required GameType type,
-    required int fromRound,
-  }) =>
-      _guarded(() => _repo.advanceOrFinish(
-            coupleId: coupleId,
-            type: type,
-            fromRound: fromRound,
-          ));
-
-  Future<bool> finishGame({
+  /// الانتقال للجولة التالية أو إنهاء اللعبة من خلال Cloud Function موثوقة.
+  Future<bool> advanceOrFinish({
     required String coupleId,
     required GameType type,
     required int fromRound,
