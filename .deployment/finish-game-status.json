@@ -1,6 +1,6 @@
 {
   "status": "failure",
-  "authMode": "missing",
+  "authMode": "service-account",
   "commit": "afec159fe7a929b9c52ff222f9a352bd1fdfde3e",
   "runId": "30843709067",
   "runUrl": "https://github.com/Abdulfattahft/desktop-tutorial/actions/runs/30843709067"
