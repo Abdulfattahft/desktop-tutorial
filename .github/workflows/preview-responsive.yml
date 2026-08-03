@@ -11,6 +11,8 @@ on:
       - 'lib/**'
       - 'web/**'
       - 'test/**'
+      - 'functions/**'
+      - 'firebase.json'
       - 'pubspec.yaml'
       - '.github/workflows/preview-responsive.yml'
 
@@ -46,6 +48,16 @@ jobs:
 
       - name: Run tests
         run: flutter test
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate Cloud Functions
+        run: |
+          npm install --prefix functions --ignore-scripts
+          npm --prefix functions run check
 
       - name: Build responsive preview
         run: |
