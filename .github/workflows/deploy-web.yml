@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - baynana-web
+      - fix/responsive-performance
   workflow_dispatch:
 
 permissions:
@@ -13,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: baynana-web-pages
+  group: baynana-web-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -41,6 +42,9 @@ jobs:
       - name: Analyze Dart code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      - name: Run responsive tests
+        run: flutter test test/core/responsive
+
       - name: Build web release
         run: |
           flutter build web --release \
@@ -52,6 +56,7 @@ jobs:
         run: cp build/web/index.html build/web/404.html
 
       - name: Upload GitHub Pages artifact
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4
         with:
           path: build/web
