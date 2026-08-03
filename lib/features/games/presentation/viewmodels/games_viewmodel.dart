@@ -2,12 +2,18 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/models/game_models.dart';
 import '../../data/repositories/games_repository.dart';
+import '../../data/services/game_completion_service.dart';
 
 /// ViewModel الألعاب — أفعال المستخدم فقط
 /// (عرض الجلسة يتم مباشرة عبر Stream في الشاشات للمزامنة اللحظية)
 class GamesViewModel extends ChangeNotifier {
   final GamesRepository _repo;
-  GamesViewModel(this._repo);
+  final GameCompletionService _completionService;
+
+  GamesViewModel(
+    this._repo, {
+    GameCompletionService? completionService,
+  }) : _completionService = completionService ?? GameCompletionService();
 
   bool isBusy = false;
   String? errorMessage;
@@ -26,6 +32,9 @@ class GamesViewModel extends ChangeNotifier {
     try {
       await action();
       return true;
+    } on GameCompletionException catch (error) {
+      errorMessage = error.message;
+      return false;
     } catch (_) {
       errorMessage = 'حدث خطأ، تأكد من اتصالك وحاول مرة أخرى';
       return false;
@@ -71,6 +80,7 @@ class GamesViewModel extends ChangeNotifier {
   }) async {
     if (isBusy) return null;
     isBusy = true;
+    errorMessage = null;
     notifyListeners();
     try {
       return await _repo.spinWheel(coupleId: coupleId, roundIndex: roundIndex);
@@ -83,11 +93,27 @@ class GamesViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> advanceOrFinish({
+  Future<bool> advanceRound({
     required String coupleId,
     required GameType type,
     required int fromRound,
   }) =>
       _guarded(() => _repo.advanceOrFinish(
-          coupleId: coupleId, type: type, fromRound: fromRound));
+            coupleId: coupleId,
+            type: type,
+            fromRound: fromRound,
+          ));
+
+  Future<bool> finishGame({
+    required String coupleId,
+    required GameType type,
+    required int fromRound,
+  }) =>
+      _guarded(() async {
+        await _completionService.finishGame(
+          coupleId: coupleId,
+          type: type,
+          fromRound: fromRound,
+        );
+      });
 }
