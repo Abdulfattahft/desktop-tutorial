@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 concurrency:
@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: fix/responsive-performance
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -76,6 +78,7 @@ jobs:
             exit 0
           fi
 
+          echo "mode=missing" >> "${GITHUB_OUTPUT}"
           echo "::error::No Firebase deployment credential is configured. Add FIREBASE_SERVICE_ACCOUNT_BAYNANA_1047C or FIREBASE_TOKEN in repository secrets."
           exit 1
 
@@ -97,6 +100,50 @@ jobs:
             --project baynana-1047c \
             --token "${FIREBASE_TOKEN}" \
             --non-interactive
+
+      - name: Persist deployment result
+        if: always()
+        shell: bash
+        env:
+          DEPLOY_STATUS: ${{ job.status }}
+          AUTH_MODE: ${{ steps.auth.outputs.mode }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin fix/responsive-performance
+          git checkout fix/responsive-performance
+          git pull --ff-only origin fix/responsive-performance
+          mkdir -p .deployment
+
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload = {
+              "status": os.environ.get("DEPLOY_STATUS", "unknown"),
+              "authMode": os.environ.get("AUTH_MODE") or "none",
+              "commit": os.environ["GITHUB_SHA"],
+              "runId": os.environ["GITHUB_RUN_ID"],
+              "runUrl": (
+                  f"{os.environ['GITHUB_SERVER_URL']}/"
+                  f"{os.environ['GITHUB_REPOSITORY']}/actions/runs/"
+                  f"{os.environ['GITHUB_RUN_ID']}"
+              ),
+          }
+          Path(".deployment/finish-game-status.json").write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          git add .deployment/finish-game-status.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore: record finishGame deployment status [skip ci]"
+          git push origin fix/responsive-performance
 
       - name: Report successful deployment
         if: success()
