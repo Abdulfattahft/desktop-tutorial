@@ -1,0 +1,154 @@
+name: Responsive Preview
+
+on:
+  push:
+    branches:
+      - fix/responsive-performance
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'lib/**'
+      - 'web/**'
+      - 'test/**'
+      - 'functions/**'
+      - 'firebase.json'
+      - 'pubspec.yaml'
+      - '.github/workflows/preview-responsive.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: responsive-preview-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate responsive branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout responsive branch
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate Cloud Functions
+        run: |
+          npm install --prefix functions --ignore-scripts
+          npm --prefix functions run check
+
+      - name: Build responsive preview
+        run: |
+          flutter build web --release \
+            --base-href "/desktop-tutorial/preview-responsive/" \
+            --pwa-strategy=none \
+            --dart-define=USE_PATH_URL_STRATEGY=false
+
+      - name: Upload preview build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: responsive-preview-build-${{ github.event_name }}
+          path: build/web
+          retention-days: 7
+
+  deploy-preview:
+    name: Deploy responsive preview
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: responsive-preview
+      url: https://abdulfattahft.github.io/desktop-tutorial/preview-responsive/
+
+    steps:
+      - name: Checkout stable main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: stable
+
+      - name: Checkout responsive branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/responsive-performance
+          path: preview
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+
+      - name: Build stable site root
+        working-directory: stable
+        run: |
+          flutter pub get
+          flutter build web --release \
+            --base-href "/desktop-tutorial/" \
+            --pwa-strategy=none \
+            --dart-define=USE_PATH_URL_STRATEGY=false
+
+      - name: Build responsive preview path
+        working-directory: preview
+        run: |
+          flutter pub get
+          flutter build web --release \
+            --base-href "/desktop-tutorial/preview-responsive/" \
+            --pwa-strategy=none \
+            --dart-define=USE_PATH_URL_STRATEGY=false
+
+      - name: Assemble Pages artifact
+        run: |
+          mkdir -p site/preview-responsive
+          cp -R stable/build/web/. site/
+          cp -R preview/build/web/. site/preview-responsive/
+          cp site/index.html site/404.html
+          printf '%s' "${GITHUB_SHA}" > site/preview-responsive/preview-version.txt
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+      - name: Deploy preview
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify preview is live
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          URL="https://abdulfattahft.github.io/desktop-tutorial/preview-responsive/preview-version.txt"
+          for attempt in {1..18}; do
+            DEPLOYED_SHA="$(curl -fsSL "${URL}?revision=${EXPECTED_SHA}" || true)"
+            if [ "${DEPLOYED_SHA}" = "${EXPECTED_SHA}" ]; then
+              echo "Preview deployed: ${DEPLOYED_SHA}"
+              exit 0
+            fi
+            echo "Attempt ${attempt}/18: preview='${DEPLOYED_SHA:-unavailable}'"
+            sleep 10
+          done
+          echo "::error::Responsive preview did not publish the expected revision."
+          exit 1

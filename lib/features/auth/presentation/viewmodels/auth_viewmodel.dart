@@ -25,12 +25,13 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// تحميل بيانات المستخدم الحالي (تُستدعى من Splash عند وجود جلسة)
+  /// تحميل بيانات المستخدم الحالي وتحديث الواجهات التي تعرض النقاط والعملات.
   Future<bool> loadCurrentUser() async {
     final user = _repo.currentUser;
     if (user == null) return false;
     try {
       currentUser = await _repo.getUserData(user.uid);
+      notifyListeners();
       await _repo.updateLastActive(user.uid);
       return true;
     } catch (_) {

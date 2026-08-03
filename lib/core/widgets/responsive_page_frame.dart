@@ -1,11 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
-/// إطار عام للتطبيق.
+/// Root frame shared by every route.
 ///
-/// يجب أن يملأ Flutter مساحة المتصفح كاملة دائمًا. تقييد العرض هنا كان يجعل
-/// Safari على iPhone وiPad يعرض التطبيق في جزء من الشاشة عندما يبلّغ Flutter
-/// بقياس تخطيط أكبر من قياس الجهاز. ضبط العرض الأقصى يتم داخل كل صفحة عند
-/// الحاجة، مثل صفحات تسجيل الدخول والتسجيل، وليس على جذر التطبيق كله.
+/// The Flutter surface always fills the browser. Width constraints belong to
+/// page content, never to the application root.
 class ResponsivePageFrame extends StatelessWidget {
   const ResponsivePageFrame({required this.child, super.key});
 
@@ -13,9 +13,41 @@ class ResponsivePageFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: SizedBox.expand(child: child),
+    final media = MediaQuery.of(context);
+
+    return MediaQuery(
+      data: media.copyWith(
+        textScaler: media.textScaler.clamp(
+          minScaleFactor: 0.9,
+          maxScaleFactor: 1.35,
+        ),
+      ),
+      child: ScrollConfiguration(
+        behavior: const _BaynanaScrollBehavior(),
+        child: ColoredBox(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: SizedBox.expand(child: child),
+        ),
+      ),
     );
+  }
+}
+
+class _BaynanaScrollBehavior extends MaterialScrollBehavior {
+  const _BaynanaScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return Theme.of(context).platform == TargetPlatform.iOS
+        ? const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics())
+        : const ClampingScrollPhysics();
   }
 }

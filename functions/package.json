@@ -2,7 +2,10 @@
   "name": "baynana-functions",
   "description": "Cloud Functions لتطبيق بيننا",
   "engines": { "node": "20" },
-  "main": "index.js",
+  "main": "bootstrap.js",
+  "scripts": {
+    "check": "node --check index.js && node --check bootstrap.js && node --check game_completion.js && node game_completion.test.js"
+  },
   "dependencies": {
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.1.0"

@@ -4,8 +4,9 @@ import 'package:provider/provider.dart';
 
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'features/settings/presentation/viewmodels/settings_viewmodel.dart';
 import 'core/widgets/responsive_page_frame.dart';
+import 'features/games/presentation/widgets/game_action_feedback.dart';
+import 'features/settings/presentation/viewmodels/settings_viewmodel.dart';
 
 /// جذر تطبيق "بيننا"
 /// - العربية هي اللغة الافتراضية (RTL تلقائيًا)
@@ -19,6 +20,7 @@ class BaynanaApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'بيننا',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: gameScaffoldMessengerKey,
 
       // ===== الثيمات =====
       theme: AppTheme.light,
@@ -41,7 +43,9 @@ class BaynanaApp extends StatelessWidget {
       // ===== التوجيه =====
       routerConfig: AppRouter.router,
       builder: (context, child) => ResponsivePageFrame(
-        child: child ?? const SizedBox.shrink(),
+        child: GameActionFeedback(
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }
