@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/viewmodels/auth_viewmodel.dart';
 import '../viewmodels/games_viewmodel.dart';
 
 final GlobalKey<ScaffoldMessengerState> gameScaffoldMessengerKey =
@@ -20,6 +23,7 @@ class GameActionFeedback extends StatefulWidget {
 class _GameActionFeedbackState extends State<GameActionFeedback> {
   GamesViewModel? _viewModel;
   int _shownFeedbackRevision = 0;
+  int _handledCompletionRevision = 0;
 
   @override
   void didChangeDependencies() {
@@ -39,6 +43,12 @@ class _GameActionFeedbackState extends State<GameActionFeedback> {
   void _handleViewModelChange() {
     final viewModel = _viewModel;
     if (!mounted || viewModel == null) return;
+
+    if (viewModel.completionRevision > _handledCompletionRevision) {
+      _handledCompletionRevision = viewModel.completionRevision;
+      unawaited(context.read<AuthViewModel>().loadCurrentUser());
+    }
+
     if (viewModel.feedbackRevision <= _shownFeedbackRevision) return;
 
     final message = viewModel.errorMessage;
